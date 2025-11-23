@@ -1,0 +1,33 @@
+[debug] [2025-11-23T12:24:03.103Z] ----------------------------------------------------------------------
+[debug] [2025-11-23T12:24:03.106Z] Command:       /nix/store/ws50yvm6vzlzf7jzz6n7xh4szddrack1-nodejs-20.19.1/bin/node /nix/store/12bms99s479knhxggq0wrjfch7rhy26s-firebase-tools-14.24.1/lib/node_modules/firebase-tools/lib/bin/firebase.js init hosting
+[debug] [2025-11-23T12:24:03.107Z] CLI Version:   14.24.1
+[debug] [2025-11-23T12:24:03.107Z] Platform:      linux
+[debug] [2025-11-23T12:24:03.107Z] Node Version:  v20.19.1
+[debug] [2025-11-23T12:24:03.107Z] Time:          Sun Nov 23 2025 12:24:03 GMT+0000 (Coordinated Universal Time)
+[debug] [2025-11-23T12:24:03.107Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-11-23T12:24:03.115Z] Checked if tokens are valid: true, expires at: 1763904168553
+[debug] [2025-11-23T12:24:03.116Z] Checked if tokens are valid: true, expires at: 1763904168553
+[debug] [2025-11-23T12:24:03.121Z] >>> [apiv2][query] GET https://monospace-pa.googleapis.com/v1/workspaces/zamhelper-63123460 [none]
+[debug] [2025-11-23T12:24:04.039Z] <<< [apiv2][status] GET https://monospace-pa.googleapis.com/v1/workspaces/zamhelper-63123460 200
+[debug] [2025-11-23T12:24:04.040Z] <<< [apiv2][body] GET https://monospace-pa.googleapis.com/v1/workspaces/zamhelper-63123460 {"workspaceId":"zamhelper-63123460","name":"ZamHelper","workspaceRedirectUrl":"firebase-zamhelper-1763893850082.cluster-owzhzna3l5cj6tredjpnwucna4.cloudworkstations.dev","status":"WORKSPACE_STATUS_RUNNING","lastAccessDatetime":"2025-11-23T10:33:18.205624Z","failureReason":"CREATE_OR_UPDATE failed too many times","workspaceTemplate":"WORKSPACE_TEMPLATE_BLANK_WEB","owner":"SELF","serviceAccountEmail":"msp-4908494621677391832@monospace-per-ws-sa-10.iam.gserviceaccount.com","enableNix":true,"ownerEmail":"pushpakumar5409@gmail.com","workspaceImageUrl":"https://www.gstatic.com/monospace/231115/logo_nextjs.svg","templateArgs":"{\"language\":\"ts\",\"srcDir\":false,\"eslint\":true,\"app\":true,\"tailwind\":true,\"__agentic_workspace\":true}","templateRepoUrl":"file:///usr/local/monospace/templates/public/nextjs","workstationAccessToken":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2Nsb3VkLmdvb2dsZS5jb20vd29ya3N0YXRpb25zIiwiYXVkIjoiZmlyZWJhc2UtemFtaGVscGVyLTE3NjM4OTM4NTAwODIuY2x1c3Rlci1vd3poem5hM2w1Y2o2dHJlZGpwbnd1Y25hNC5jbG91ZHdvcmtzdGF0aW9ucy5kZXYiLCJpYXQiOjE3NjM5MDA2NDMsImV4cCI6MTc2Mzk4NzA0M30.eEpGn5_0FdJZW5cFn2yeqo07U4yyXZMVqCnOsm6bXCRk4UKTX6vN1raDFK-eN90bwu6rIcJHkH3Y3JewcY7bU8a3qh3l7yWMs_BIbLJHa_8teslJfw2tKP8c1v8ij-2niJsauteJiifw7ruhuf0lkef2zC-Ax_jlcOTsNVp3PkmefIytzSxU3YiuoJL_jXNgYlrvMVyVNwRiSv-BR2an2MKdt7r0kILZUp1j-yw6zIBfN1YPvhVdwtgzjpxAIlJu6-xwV8aw4UG3Z1mGePQwP5-truh0kyWZcNh0Rj8ArbAIUbqnaCqZBpC2-bIeNaM2GoDinCM1Tpf3PDs8ofFhgw"}
+[info] 
+     ######## #### ########  ######## ########     ###     ######  ########
+     ##        ##  ##     ## ##       ##     ##  ##   ##  ##       ##
+     ######    ##  ########  ######   ########  #########  ######  ######
+     ##        ##  ##    ##  ##       ##     ## ##     ##       ## ##
+     ##       #### ##     ## ######## ########  ##     ##  ######  ########
+
+You're about to initialize a Firebase project in this directory:
+
+  /home/user/zamhelper
+
+[info] 
+=== Project Setup
+[info] 
+[info] First, let's associate this project directory with a Firebase project.
+[info] You can create multiple project aliases by running firebase use --add, 
+[info] 
+[info] i  If you want to create a project in a Google Cloud organization or folder, please use "firebase projects:create" instead, and return to this command when you've created the project. 
+[debug] [2025-11-23T12:24:11.764Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2025-11-23T12:24:11.767Z] > authorizing via signed-in user (pushpakumar5409@gmail.com)
