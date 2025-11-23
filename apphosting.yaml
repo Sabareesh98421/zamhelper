@@ -1,9 +1,18 @@
 run:
   serviceAccount: 666446126828-compute@developer.gserviceaccount.com
   environment:
+    # Supabase for Server (SSR)
+    - variable: SUPABASE_URL
+      secret: SUPABASE_URL
+    - variable: SUPABASE_ANON_KEY
+      secret: SUPABASE_ANON_KEY
+
+    # Supabase for Client (Auth UI)
     - variable: NEXT_PUBLIC_SUPABASE_URL
       secret: NEXT_PUBLIC_SUPABASE_URL
     - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
       secret: NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    # Fix email redirect link
     - variable: NEXT_PUBLIC_BASE_URL
       secret: NEXT_PUBLIC_BASE_URL
