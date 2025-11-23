@@ -24,5 +24,4 @@ This project is a comprehensive exam preparation platform. It allows administrat
 - **Database:** Supabase
 - **Authentication:** Supabase Auth, with support for:
     - Google
-    - GitHub
 - **Styling:** Tailwind CSS
