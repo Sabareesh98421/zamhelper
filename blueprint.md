@@ -1,27 +1,76 @@
 # Project Blueprint
 
 ## Overview
-This project is a comprehensive exam preparation platform. It allows administrators to upload PDF documents, which are then parsed to generate exam questions. Students can take these exams, review their results, and practice the questions they answered incorrectly.
 
-## Features
+This document provides a comprehensive overview of the `zamhelper` Next.js application, including its purpose, features, design, and the steps taken during its development and deployment.
 
-### Admin
-- **PDF Upload:** Admins can upload PDF files containing exam questions.
-- **PDF Management:** Admins can view a list of uploaded PDFs and their parsing status.
-- **Question Parsing:** A server-side process extracts questions from the PDFs.
-- **Fault Management:** Admins can view and resolve any issues that occur during parsing.
+## Application Purpose and Capabilities
 
-### Student
-- **Exam Dashboard:** Students can see a list of available exams.
-- **Exam Taking:** A clean interface for taking exams, with one question displayed at a time.
-- **Results Page:** Detailed results are provided after an exam is submitted, including the final score and a review of each answer.
-- **Practice Dashboard:** Students can see their past exam attempts.
-- **Practice Sessions:** Students can practice the specific questions they answered incorrectly in past exams.
+The `zamhelper` application is a tool designed to assist with exam preparation. It allows users to upload exam documents, which are then parsed to create interactive practice exams. The application provides a dashboard for users to track their progress and review their performance on past exams.
 
-## Technical Details
+## Implemented Features
 
-- **Framework:** Next.js with App Router
-- **Database:** Supabase
-- **Authentication:** Supabase Auth, with support for:
-    - Google
-- **Styling:** Tailwind CSS
+- **Authentication:** Users can log in to the application.
+- **Dashboard:** A central hub for users to access practice exams and view their progress.
+- **Exam Practice:** Users can take practice exams based on uploaded documents.
+- **Results:** After completing an exam, users can view their results.
+- **Admin Section:** A dedicated area for administrative tasks, including:
+    - **Uploads:** Administrators can upload exam documents.
+    - **Parsing:** Uploaded documents can be parsed to generate exams.
+    - **Faults:** A section to view and manage any faults or errors that occur during the parsing process.
+
+## Design and Styling
+
+- **Framework:** The application is built with Next.js and React.
+- **Styling:** The application uses Tailwind CSS for styling, with a modern and clean design.
+- **Component Library:** Shadcn UI is used for a set of pre-built, accessible, and customizable UI components.
+- **Layout:** The application has a consistent layout with a sidebar for navigation and a main content area.
+
+## Development and Deployment Steps
+
+### Initial Setup
+
+1.  **Project Initialization:** A new Next.js project was created.
+2.  **Dependency Installation:** The following dependencies were installed:
+    - `lucide-react` for icons.
+    - `@supabase/ssr` and `@supabase/auth-helpers-nextjs` for Supabase integration.
+    - `class-variance-authority`, `clsx`, and `tailwind-merge` for styling utilities.
+    - `tailwindcss-animate` for animations.
+3.  **Component Creation:** Various UI components were created for the application, including buttons, cards, and navigation elements.
+
+### Deployment
+
+1.  **Secret Creation:** The following secrets were created in Google Cloud Secret Manager to securely store environment variables:
+    - `NEXT_PUBLIC_SUPABASE_URL`
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - `NEXT_PUBLIC_BASE_URL`
+2.  **Service Account Permissions:** To resolve a deployment issue where the App Hosting service account did not have permission to access the secrets, the `secretAccessor` role was granted to the default Compute Engine service account (`666446126828-compute@developer.gserviceaccount.com`) for each of the secrets.
+3.  **App Hosting Configuration:** The `apphosting.yaml` file was updated to specify the service account to be used by App Hosting:
+    ```yaml
+    run:
+      serviceAccount: 666446126828-compute@developer.gserviceaccount.com
+      environment:
+        - variable: NEXT_PUBLIC_SUPABASE_URL
+          secret: NEXT_PUBLIC_SUPABASE_URL
+        - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+          secret: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        - variable: NEXT_PUBLIC_BASE_URL
+          secret: NEXT_PUBLIC_BASE_URL
+    ```
+4.  **Firebase Configuration:** The `firebase.json` file was created to configure the deployment for the Firebase CLI:
+    ```json
+    {
+      "hosting": {
+        "source": ".",
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "frameworksBackend": {
+          "region": "asia-southeast1"
+        }
+      }
+    }
+    ```
+5.  **Final Deployment:** The `firebase deploy` command was run, which successfully built and deployed the application to Firebase Hosting.
