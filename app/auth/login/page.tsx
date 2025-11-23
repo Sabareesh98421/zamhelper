@@ -14,7 +14,7 @@ export default function AuthPage() {
                 supabaseClient={supabase}
                 appearance={{ theme: ThemeSupa }}
                 providers={['google']}
-                redirectTo={`${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`}
+                redirectTo={'https://zamhelper.web.app/auth/callback'}
             />
         </div>
     </div>

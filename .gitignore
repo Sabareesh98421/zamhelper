@@ -16,6 +16,16 @@
 # Production
 /build
 
+node_modules/
+.next/
+dist/
+build/
+out/
+*.log
+.env
+.firebase/
+firebase-debug.log
+
 # Misc
 .DS_Store
 *.pem

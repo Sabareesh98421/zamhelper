@@ -28,17 +28,7 @@ The `zamhelper` application is a tool designed to assist with exam preparation. 
 
 ## Development and Deployment Steps
 
-### Initial Setup
-
-1.  **Project Initialization:** A new Next.js project was created.
-2.  **Dependency Installation:** The following dependencies were installed:
-    - `lucide-react` for icons.
-    - `@supabase/ssr` and `@supabase/auth-helpers-nextjs` for Supabase integration.
-    - `class-variance-authority`, `clsx`, and `tailwind-merge` for styling utilities.
-    - `tailwindcss-animate` for animations.
-3.  **Component Creation:** Various UI components were created for the application, including buttons, cards, and navigation elements.
-
-### Deployment
+### Initial Deployment
 
 1.  **Secret Creation:** The following secrets were created in Google Cloud Secret Manager to securely store environment variables:
     - `NEXT_PUBLIC_SUPABASE_URL`
@@ -73,4 +63,29 @@ The `zamhelper` application is a tool designed to assist with exam preparation. 
       }
     }
     ```
-5.  **Final Deployment:** The `firebase deploy` command was run, which successfully built and deployed the application to Firebase Hosting.
+5.  **Initial Deployment:** The `firebase deploy` command was run, which successfully built and deployed the application to a default Firebase Hosting URL.
+
+### Domain Change and Re-Deployment
+
+1.  **New Site Creation:** A new Firebase Hosting site named `zamhelper` was created to provide the URL `https://zamhelper.web.app`.
+2.  **Authentication Fix (`redirect_uri_mismatch`):**
+    *   The Supabase project's "URL Configuration" was updated to include `https://zamhelper.web.app/auth/callback` in the list of allowed "Redirect URLs".
+    *   The `NEXT_PUBLIC_BASE_URL` secret was updated to the new value `https://zamhelper.web.app`.
+3.  **Firebase Configuration Update:** The `firebase.json` file was modified to target the new `zamhelper` site for deployment:
+    ```json
+    {
+      "hosting": {
+        "site": "zamhelper",
+        "source": ".",
+        "ignore": [
+          "firebase.json",
+          "**/.*",
+          "**/node_modules/**"
+        ],
+        "frameworksBackend": {
+          "region": "asia-southeast1"
+        }
+      }
+    }
+    ```
+4.  **Final Deployment:** The `firebase deploy` command was run again, which successfully built and deployed the application to the new `https://zamhelper.web.app` URL.
