@@ -1,6 +1,11 @@
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import AuthForm from '@/app/components/Auth';
 import Link from 'next/link';
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { session } } = await supabase.auth.getSession();
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center text-center p-4">
       <main className="max-w-4xl mx-auto">
@@ -10,13 +15,16 @@ export default function Home() {
         <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-300 sm:text-xl">
           Master your subjects with our tailored practice exams. Analyze your performance, identify areas for improvement, and conquer your goals.
         </p>
-        <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-          <Link href="/auth/login" className="inline-block bg-blue-600 text-white font-semibold text-lg px-8 py-4 rounded-lg shadow-md hover:bg-blue-700 transition-transform transform hover:scale-105">
-              Log In & Get Started
-          </Link>
-          <Link href="/practice" className="inline-block bg-white text-blue-600 font-semibold text-lg px-8 py-4 rounded-lg shadow-md hover:bg-gray-100 transition-transform transform hover:scale-105 border border-blue-600">
-              Browse Practice Exams
-          </Link>
+        <div className="mt-10 flex justify-center items-center">
+          {!session ? (
+            <div className="w-full max-w-sm">
+              <AuthForm />
+            </div>
+          ) : (
+            <Link href="/practice" className="inline-block bg-white text-blue-600 font-semibold text-lg px-8 py-4 rounded-lg shadow-md hover:bg-gray-100 transition-transform transform hover:scale-105 border border-blue-600">
+                Browse Practice Exams
+            </Link>
+          )}
         </div>
       </main>
     </div>

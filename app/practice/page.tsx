@@ -1,81 +1,76 @@
-"use client";
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getPastAttemptsAction } from './actions';
-import type { Attempt, Exam } from '@/lib/types';
+// Placeholder data for practice exams
+const practiceExams = [
+  {
+    id: 'algebra-1',
+    title: 'Algebra 1',
+    description: 'Master the fundamentals of algebraic expressions, equations, and functions.',
+    category: 'Mathematics',
+  },
+  {
+    id: 'us-history',
+    title: 'US History',
+    description: 'Explore the major events and figures that shaped the United States.',
+    category: 'History',
+  },
+  {
+    id: 'biology-101',
+    title: 'Biology 101',
+    description: 'Dive into the world of cells, genetics, evolution, and ecosystems.',
+    category: 'Science',
+  },
+    {
+    id: 'literature',
+    title: 'World Literature',
+    description: 'Analyze classic literary works from around the globe.',
+    category: 'Humanities',
+  },
+];
 
-interface AttemptWithExam extends Attempt {
-    exams: Pick<Exam, 'title'>;
-}
+export default async function PracticePage() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { session } } = await supabase.auth.getSession();
 
-export default function PracticeDashboardPage() {
-    const [attempts, setAttempts] = useState<AttemptWithExam[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
+  if (!session) {
+    redirect('/');
+  }
 
-    useEffect(() => {
-        const fetchAttempts = async () => {
-            setLoading(true);
-            const result = await getPastAttemptsAction();
-            if (result.success && result.attempts) {
-                setAttempts(result.attempts as any);
-            } else {
-                setError(result.message || "Failed to load past attempts.");
-            }
-            setLoading(false);
-        };
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 w-full">
+      {/* We will add a real header component here later */}
+      <header className="bg-white dark:bg-gray-800 shadow-md py-4 px-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Practice Exams</h1>
+        <form action="/auth/signout" method="post">
+            <Button type="submit" variant="outline">
+                Sign Out
+            </Button>
+        </form>
+      </header>
 
-        fetchAttempts();
-    }, []);
-
-    if (loading) return <div className="text-center p-10">Loading practice history...</div>;
-    if (error) return <div className="text-center p-10 text-red-500">Error: {error}</div>;
-
-    return (
-        <div className="max-w-5xl mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">Practice & Review</h1>
-
-            {attempts.length === 0 ? (
-                <div className="text-center py-10 px-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">No Completed Exams Yet!</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2">Complete an exam from the dashboard to start practicing.</p>
-                    <button 
-                        onClick={() => router.push('/dashboard')}
-                        className="mt-6 px-6 py-2 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                        Go to Dashboard
-                    </button>
+      <main className="p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {practiceExams.map((exam) => (
+            <div key={exam.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out">
+              <div className="p-6">
+                <div className="text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">{exam.category}</div>
+                <h2 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{exam.title}</h2>
+                <p className="mt-3 text-gray-600 dark:text-gray-300">{exam.description}</p>
+                <div className="mt-6">
+                  <Link href={`/practice/${exam.id}`} className="inline-flex items-center text-blue-600 dark:text-blue-400 font-semibold group">
+                    Start Practice
+                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  </Link>
                 </div>
-            ) : (
-                <div className="space-y-6">
-                    {attempts.map(attempt => (
-                        <div key={attempt.id} className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{attempt.exams.title}</h2>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    Completed on: {new Date(attempt.end_time!).toLocaleDateString()} | Score: <span className="font-bold">{attempt.score?.toFixed(2)}%</span>
-                                </p>
-                            </div>
-                            <div className="mt-4 sm:mt-0 flex space-x-3 shrink-0">
-                                <button 
-                                    onClick={() => router.push(`/exam/${attempt.exam_id}/results?attemptId=${attempt.id}`)}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600 transition-colors"
-                                >
-                                    Review Answers
-                                </button>
-                                <button 
-                                    onClick={() => router.push(`/practice/session?attemptId=${attempt.id}`)}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 transition-colors"
-                                >
-                                    Practice Incorrect
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+              </div>
+            </div>
+          ))}
         </div>
-    );
+      </main>
+    </div>
+  );
 }

@@ -2,99 +2,64 @@
 
 ## Overview
 
-This document provides a comprehensive overview of the `zamhelper` Next.js application, including its purpose, features, design, and the steps taken during its development and deployment.
+This document provides a comprehensive overview of the `zamhelper` Next.js application, including its purpose, features, design, and the steps taken during its development.
 
-Your application is hosted at: [https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app](https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app)
+**Your application is hosted at:** [https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app](https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app)
 
-## Application Purpose and Capabilities
+## Application Purpose
 
-The `zamhelper` application is a tool designed to assist with exam preparation. It allows users to upload exam documents, which are then parsed to create interactive practice exams. The application provides a dashboard for users to track their progress and review their performance on past exams.
+The `zamhelper` application is a modern, web-based tool designed to help users prepare for exams. It provides a clean, intuitive interface for accessing practice materials and, in future versions, will allow for interactive exam sessions.
 
 ## Implemented Features
 
-- **Authentication:** Users can log in to the application.
-- **Dashboard:** A central hub for users to access practice exams and view their progress.
-- **Exam Practice:** Users can take practice exams based on uploaded documents.
-- **Results:** After completing an exam, users can view their results.
-- **Admin Section:** A dedicated area for administrative tasks, including:
-    - **Uploads:** Administrators can upload exam documents.
-    - **Parsing:** Uploaded documents can be parsed to generate exams.
-    - **Faults:** A section to view and manage any faults or errors that occur during the parsing process.
+### Core Application
+- **Home Page:** A visually appealing landing page that serves as the entry point to the application. It includes a link to the practice exams.
+- **"Practice Exams" Page (`/practice`):**
+    - **Route Protection:** This page is only accessible to logged-in users. Unauthorized users are automatically redirected to the home page to sign in.
+    - **Dynamic UI:** Displays a grid of available practice exams with titles, descriptions, and categories.
+    - **Modern Design:** Features a card-based layout with hover effects and clear calls-to-action.
+
+### Authentication
+- **Embedded Google Sign-In:**
+    - The Supabase Auth UI component is seamlessly embedded into the home page.
+    - It is displayed conditionally, appearing only for users who are not logged in.
+    - The form is configured to use Google as the sole OAuth provider, with specific scopes (`openid email profile`) for a streamlined user experience.
+- **Sign-Out Functionality:**
+    - A "Sign Out" button is present on the "Practice Exams" page.
+    - It uses a secure, server-side route (`/auth/signout`) to terminate the user's session and redirect them to the home page.
 
 ## Design and Styling
 
-- **Framework:** The application is built with Next.js and React.
-- **Styling:** The application uses Tailwind CSS for styling, with a modern and clean design.
-- **Component Library:** Shadcn UI is used for a set of pre-built, accessible, and customizable UI components.
-- **Layout:** The application has a consistent layout with a sidebar for navigation and a main content area.
+- **Framework:** Next.js with the App Router.
+- **Styling:** Tailwind CSS for a utility-first styling approach.
+- **Component Library:** Shadcn UI for a base set of high-quality, accessible, and customizable components (e.g., Buttons).
+- **Icons:** `lucide-react` for clean and modern iconography.
+- **Layout:**
+    - **Home Page:** A centered, two-column layout featuring a hero section with a title, description, and a call-to-action button, alongside the embedded authentication form.
+    - **Practice Page:** A full-width layout with a dedicated header and a main content area that uses a responsive grid to display exam cards.
 
 ## Development and Deployment Steps
 
-### Initial Deployment
+### Initial Deployment & Configuration
+*(This section details the initial setup involving secret management, service account permissions, and Firebase configuration for the first successful deployment.)*
 
-1.  **Secret Creation:** The following secrets were created in Google Cloud Secret Manager to securely store environment variables:
-    - `NEXT_PUBLIC_SUPABASE_URL`
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-    - `NEXT_PUBLIC_BASE_URL`
-2.  **Service Account Permissions:** To resolve a deployment issue where the App Hosting service account did not have permission to access the secrets, the `secretAccessor` role was granted to the default Compute Engine service account (`666446126828-compute@developer.gserviceaccount.com`) for each of the secrets.
-3.  **App Hosting Configuration:** The `apphosting.yaml` file was updated to specify the service account to be used by App Hosting:
-    ```yaml
-    run:
-      serviceAccount: 666446126828-compute@developer.gserviceaccount.com
-      environment:
-        - variable: NEXT_PUBLIC_SUPABASE_URL
-          secret: NEXT_PUBLIC_SUPABASE_URL
-        - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
-          secret: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        - variable: NEXT_PUBLIC_BASE_URL
-          secret: NEXT_PUBLIC_BASE_URL
-    ```
-4.  **Firebase Configuration:** The `firebase.json` file was created to configure the deployment for the Firebase CLI:
-    ```json
-    {
-      "hosting": {
-        "source": ".",
-        "ignore": [
-          "firebase.json",
-          "**/.*",
-          "**/node_modules/**"
-        ],
-        "frameworksBackend": {
-          "region": "asia-southeast1"
-        }
-      }
-    }
-    ```
-5.  **Initial Deployment:** The `firebase deploy` command was run, which successfully built and deployed the application to a default Firebase Hosting URL.
+1.  **Secret Creation:** Securely created secrets in Google Cloud Secret Manager for Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+2.  **Permissions & Configuration:** Resolved initial deployment failures by granting the `secretAccessor` role to the service account and configuring `apphosting.yaml` and `firebase.json` to correctly link the service account and secrets.
+3.  **Domain Change:** Successfully transitioned the deployment from a default Firebase URL to the custom `zamhelper.web.app` domain, which involved updating Supabase redirect URIs and the `firebase.json` configuration.
 
-### Domain Change and Re-Deployment
+### Refactoring Authentication & Building Core Features
+1.  **Fixing Authentication Flow:**
+    - **Problem:** A `500 Internal Server Error` was occurring due to a misconfigured authentication callback.
+    - **Solution:** The authentication logic was refactored to use a purely client-side flow. The incorrect server-side callback route (`/auth/callback/route.ts`) was deleted.
+    - The `redirectTo` parameter in the `Auth` component was corrected to point to the application's base URL, allowing the Supabase client library to handle the session correctly after the user returns from Google.
+2.  **Embedding the Login Form:**
+    - The dedicated `/auth/login` page was removed.
+    - The Supabase Auth UI component was moved directly into the main `app/page.tsx` and is now rendered conditionally, providing a much smoother user experience.
+3.  **Building the Practice Exams Page:**
+    - Created the new protected route at `app/practice/page.tsx`.
+    - Implemented server-side logic to check for an active session and redirect non-authenticated users.
+    - Designed and built the UI using a responsive grid layout to display placeholder exam data.
+4.  **Implementing Sign-Out:**
+    - Created the `app/auth/signout/route.ts` file to handle POST requests.
+    - This server action securely signs the user out using `supabase.auth.signOut()` and redirects them to the home page.
 
-1.  **New Site Creation:** A new Firebase Hosting site named `zamhelper` was created to provide the URL `https://zamhelper.web.app`.
-2.  **Authentication Fix (`redirect_uri_mismatch`):**
-    *   The Supabase project's "URL Configuration" was updated to include `https://zamhelper.web.app/auth/callback` in the list of allowed "Redirect URLs".
-    *   The `NEXT_PUBLIC_BASE_URL` secret was updated to the new value `https://zamhelper.web.app`.
-3.  **Firebase Configuration Update:** The `firebase.json` file was modified to target the new `zamhelper` site for deployment:
-    ```json
-    {
-      "hosting": {
-        "site": "zamhelper",
-        "source": ".",
-        "ignore": [
-          "firebase.json",
-          "**/.*",
-          "**/node_modules/**"
-        ],
-        "frameworksBackend": {
-          "region": "asia-southeast1"
-        }
-      }
-    }
-    ```
-4.  **Final Deployment:** The `firebase deploy` command was run again, which successfully built and deployed the application to the new `https://zamhelper.web.app` URL.
-
-### OAUTH `redirect_uri_mismatch` fix
-
-1. **Dynamic Redirect URI:** Replaced the hardcoded redirect URI in `app/auth/login/page.tsx` with a function that generates the correct URI based on the environment.
-2. **Code Simplification:** Streamlined the code in `app/auth/callback/route.ts`, `lib/supabase/server.ts`, and `lib/supabase/middleware.ts` to make it more efficient and easier to maintain.
-3. **Proxy Confirmation:** Verified that `proxy.ts` is correctly configured to use the `updateSession` function to handle authentication.
-4. **Removed `middleware.ts`:** Deleted the `middleware.ts` file to avoid conflicts with `proxy.ts`.
