@@ -9,14 +9,30 @@ export default function AuthPage() {
 
   return (
     <div className="flex justify-center items-center h-screen">
-        <div className="w-1/3">
-            <Auth
-                supabaseClient={supabase}
-                appearance={{ theme: ThemeSupa }}
-                providers={['google']}
-                redirectTo={'https://zamhelper.web.app/auth/callback'}
-            />
-        </div>
+      <div className="w-1/3">
+        <Auth
+          supabaseClient={supabase}
+          appearance={{ theme: ThemeSupa }}
+        />
+
+        <button
+          onClick={() =>
+            supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                queryParams: {
+                  scope: "openid email profile"
+                },
+                redirectTo: "https://zamhelper.web.app/auth/callback"
+              }
+            })
+          }
+          className="bg-blue-600 mt-4 p-2 w-full text-white rounded"
+        >
+          Sign in with Google
+        </button>
+
+      </div>
     </div>
   )
 }
