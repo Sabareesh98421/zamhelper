@@ -1,32 +1,40 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                get: (name) => request.cookies.get(name)?.value,
-                set: (name, value, options) => {
-                    const newHeaders = new Headers(request.headers)
-                    const newRequest = new NextRequest(request.url, { headers: newHeaders })
-                    const response = NextResponse.next({ request: newRequest })
-                    response.cookies.set(name, value, options)
-                    return response
-                },
-                remove: (name, options) => {
-                    const newHeaders = new Headers(request.headers)
-                    const newRequest = new NextRequest(request.url, { headers: newHeaders })
-                    const response = NextResponse.next({ request: newRequest })
-                    response.cookies.set(name, '', options)
-                    return response
-                },
-            },
-        }
-    )
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-    await supabase.auth.getUser()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
 
-    return NextResponse.next()
+  await supabase.auth.getUser()
+
+  return response
 }
