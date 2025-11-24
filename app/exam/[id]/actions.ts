@@ -1,9 +1,9 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function getExamQuestionsAction(examId: number) {
-    const supabase = createClient();
+    const supabase = await createSupabaseServerClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, message: 'User not authenticated' };
@@ -47,7 +47,7 @@ export async function getExamQuestionsAction(examId: number) {
 }
 
 export async function submitExamAction(attemptId: number, answers: Record<number, number>) {
-    const supabase = createClient();
+    const supabase = await createSupabaseServerClient();
 
     // 1. Get all questions for the exam to check answers against
     const { data: attemptData } = await supabase.from('attempts').select('exam_id').eq('id', attemptId).single();

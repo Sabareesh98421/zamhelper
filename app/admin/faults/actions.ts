@@ -1,9 +1,9 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function resolveFaultAction(faultId: number): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createSupabaseServerClient();
 
   const { error } = await supabase
     .from('parsing_faults')

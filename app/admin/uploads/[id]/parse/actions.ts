@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 const pdf = require('pdf-parse');
 import { z } from 'zod';
 
@@ -14,7 +14,7 @@ const questionSchema = z.object({
 });
 
 export async function parsePdfAction(pdfId: number): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createSupabaseServerClient();
 
   // 1. Get the PDF record from the database
   const { data: pdfRecord, error: pdfError } = await supabase

@@ -1,9 +1,9 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function getPastAttemptsAction() {
-    const supabase = createClient();
+    const supabase = await createSupabaseServerClient();
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, message: 'User not authenticated' };
