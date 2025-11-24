@@ -4,6 +4,8 @@
 
 This document provides a comprehensive overview of the `zamhelper` Next.js application, including its purpose, features, design, and the steps taken during its development and deployment.
 
+Your application is hosted at: [https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app](https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app)
+
 ## Application Purpose and Capabilities
 
 The `zamhelper` application is a tool designed to assist with exam preparation. It allows users to upload exam documents, which are then parsed to create interactive practice exams. The application provides a dashboard for users to track their progress and review their performance on past exams.
