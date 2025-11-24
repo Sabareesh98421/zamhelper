@@ -13,17 +13,17 @@ The `zamhelper` application is a modern, web-based tool designed to help users p
 ## Implemented Features
 
 ### Core Application
-- **Home Page:** A visually appealing landing page that serves as the entry point to the application. It includes a link to the practice exams.
+- **Home Page:** A visually appealing landing page that serves as the entry point to the application. It includes a "Sign In with Google" button for authentication.
 - **"Practice Exams" Page (`/practice`):**
     - **Route Protection:** This page is only accessible to logged-in users. Unauthorized users are automatically redirected to the home page to sign in.
     - **Dynamic UI:** Displays a grid of available practice exams with titles, descriptions, and categories.
     - **Modern Design:** Features a card-based layout with hover effects and clear calls-to-action.
 
 ### Authentication
-- **Embedded Google Sign-In:**
-    - The Supabase Auth UI component is seamlessly embedded into the home page.
-    - It is displayed conditionally, appearing only for users who are not logged in.
-    - The form is configured to use Google as the sole OAuth provider, with specific scopes (`openid email profile`) for a streamlined user experience.
+- **Google Sign-In Flow:**
+    - **Login Action:** A secure, server-side function (`app/auth/actions.ts`) initiates the Google OAuth flow.
+    - **Callback Route:** A dedicated route (`app/auth/callback/route.ts`) handles the callback from Google, securely exchanging the authorization code for a user session.
+    - **Error Handling:** A user-friendly error page (`app/auth/auth-code-error/page.tsx`) is displayed if any issues occur during the sign-in process.
 - **Sign-Out Functionality:**
     - A "Sign Out" button is present on the "Practice Exams" page.
     - It uses a secure, server-side route (`/auth/signout`) to terminate the user's session and redirect them to the home page.
@@ -35,7 +35,7 @@ The `zamhelper` application is a modern, web-based tool designed to help users p
 - **Component Library:** Shadcn UI for a base set of high-quality, accessible, and customizable components (e.g., Buttons).
 - **Icons:** `lucide-react` for clean and modern iconography.
 - **Layout:**
-    - **Home Page:** A centered, two-column layout featuring a hero section with a title, description, and a call-to-action button, alongside the embedded authentication form.
+    - **Home Page:** A centered, two-column layout featuring a hero section with a title, description, and a "Sign In with Google" button.
     - **Practice Page:** A full-width layout with a dedicated header and a main content area that uses a responsive grid to display exam cards.
 
 ## Development and Deployment Steps
@@ -63,3 +63,14 @@ The `zamhelper` application is a modern, web-based tool designed to help users p
     - Created the `app/auth/signout/route.ts` file to handle POST requests.
     - This server action securely signs the user out using `supabase.auth.signOut()` and redirects them to the home page.
 
+### Implementing Google Sign-In and Debugging
+1.  **Google Sign-In Implementation:**
+    - Replaced the embedded Supabase Auth UI with a "Sign In with Google" button.
+    - Created a new server action (`app/auth/actions.ts`) to initiate the OAuth flow.
+    - Added a callback route (`app/auth/callback/route.ts`) to handle the authentication exchange.
+    - Created an error page (`app/auth/auth-code-error/page.tsx`) for better user feedback.
+2.  **Debugging the Build:**
+    - **Problem 1:** Build failed due to missing `Card` components from `shadcn/ui`.
+    - **Solution:** Rewrote the error page using basic styles to remove the dependency.
+    - **Problem 2:** A persistent TypeScript error (`Property 'get' does not exist on type 'Promise<ReadonlyHeaders>'`) caused multiple build failures.
+    - **Solution:** After several incorrect attempts, the issue was resolved by correctly `await`ing the `headers()` function in the `login` server action, as it is an asynchronous function. This was a critical fix that unblocked the build process.
