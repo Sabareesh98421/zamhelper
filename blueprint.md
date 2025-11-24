@@ -89,3 +89,10 @@ The `zamhelper` application is a tool designed to assist with exam preparation. 
     }
     ```
 4.  **Final Deployment:** The `firebase deploy` command was run again, which successfully built and deployed the application to the new `https://zamhelper.web.app` URL.
+
+### OAUTH `redirect_uri_mismatch` fix
+
+1. **Dynamic Redirect URI:** Replaced the hardcoded redirect URI in `app/auth/login/page.tsx` with a function that generates the correct URI based on the environment.
+2. **Code Simplification:** Streamlined the code in `app/auth/callback/route.ts`, `lib/supabase/server.ts`, and `lib/supabase/middleware.ts` to make it more efficient and easier to maintain.
+3. **Proxy Confirmation:** Verified that `proxy.ts` is correctly configured to use the `updateSession` function to handle authentication.
+4. **Removed `middleware.ts`:** Deleted the `middleware.ts` file to avoid conflicts with `proxy.ts`.
