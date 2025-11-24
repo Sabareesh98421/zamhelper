@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "postinstall": "bash seed.sh"
+    "lint": "eslint"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",
