@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  return NextResponse.redirect(new URL('/', req.url), {
+  // The NEXT_PUBLIC_BASE_URL is set in apphosting.yaml to the public URL of the app.
+  // Using it here ensures that after sign-out, the user is redirected to the
+  // correct homepage, avoiding the internal 0.0.0.0 address.
+  return NextResponse.redirect(process.env.NEXT_PUBLIC_BASE_URL!, {
     status: 302,
   });
 }
