@@ -1,9 +1,8 @@
 
-import { createSupabaseServerClient } from "@/lib/supabase/server"; // Correctly import the utility
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from 'next/link';
 
 async function getUploads() {
-    // Use the centralized utility to create the Supabase client
     const supabase = await createSupabaseServerClient();
     
     const { data: { session } } = await supabase.auth.getSession();

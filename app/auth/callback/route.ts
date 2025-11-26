@@ -25,9 +25,14 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.redirect(`${origin}${next}`)
       }
+    } else {
+        // Log the error for debugging
+        console.error("Error exchanging code for session:", error);
+        // show the user a more informative error page
+        return NextResponse.redirect(`${origin}/auth/auth-code-error?message=${encodeURIComponent(error.message)}&code=403`);
     }
   }
 
   // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  return NextResponse.redirect(`${origin}/auth/auth-code-error?message=No code found in the request.`)
 }

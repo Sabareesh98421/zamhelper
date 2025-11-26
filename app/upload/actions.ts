@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 export async function uploadPdf(formData: FormData) {
     console.log("[Server Action: uploadPdf] Received request for sanitization and storage.");
     
-    // Add a check to ensure Firebase Admin SDK is initialized
+    // The adminStorage object from firebase-admin is already the bucket
     if (!adminStorage) {
         console.error("[Server Action: uploadPdf] Firebase Admin SDK not initialized. Storage is unavailable.");
         return { success: false, message: "Storage service is not configured. Please contact support." };
@@ -36,7 +36,7 @@ export async function uploadPdf(formData: FormData) {
     try {
         const fileBuffer = Buffer.from(await file.arrayBuffer());
         
-        // Since adminStorage is a bucket instance, we can use it directly
+        // adminStorage is the bucket, so we can call .file() directly
         await adminStorage.file(storagePath).save(fileBuffer, {
             metadata: { contentType: file.type },
         });
@@ -54,6 +54,8 @@ export async function uploadPdf(formData: FormData) {
 
         if (uploadError) {
             console.error("[Server Action] Supabase insert error:", uploadError);
+            // If DB insert fails, delete the file from storage to prevent orphans
+            await adminStorage.file(storagePath).delete();
             return { success: false, message: "Could not save file metadata." };
         }
 

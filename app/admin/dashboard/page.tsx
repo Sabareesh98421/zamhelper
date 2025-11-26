@@ -32,7 +32,7 @@ const AdminDashboardPage = async () => {
           id,
           score,
           start_time, // Corrected column name
-          users ( email ),
+          users ( email ),then 
           exams ( title )
         `)
         .order('start_time', { ascending: false }) // Corrected column name
