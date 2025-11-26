@@ -1,7 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-const pdf = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 import { z } from 'zod';
 
 const questionSchema = z.object({
@@ -39,7 +39,8 @@ export async function parsePdfAction(pdfId: number): Promise<{ success: boolean;
   // 3. Parse the PDF content
   try {
     const buffer = Buffer.from(await fileData.arrayBuffer());
-    const pdfData = await pdf(buffer);
+    const parser = new PDFParse({ data: buffer });
+    const pdfData = await parser.getText();
 
     // 4. Implement your question extraction logic here
     // This is a placeholder for the complex logic of identifying questions, options, and answers.

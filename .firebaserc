@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "zamhelper-240302"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

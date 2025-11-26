@@ -1,95 +1,77 @@
-'use server';
 
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+'use server'
 
-export async function getExamQuestionsAction(examId: number) {
-    const supabase = await createSupabaseServerClient();
+import { db } from '@/app/lib/firebase';
+import { doc, getDoc, collection, addDoc, getDocs } from 'firebase/firestore';
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, message: 'User not authenticated' };
-
-    // Check for an existing, non-submitted attempt
-    let { data: attempt, error: attemptError } = await supabase
-        .from('attempts')
-        .select('id')
-        .eq('exam_id', examId)
-        .eq('student_id', user.id)
-        .eq('is_submitted', false)
-        .single();
-
-    // If no active attempt, create one
-    if (attemptError || !attempt) {
-        const { data: newAttempt, error: newAttemptError } = await supabase
-            .from('attempts')
-            .insert({ exam_id: examId, student_id: user.id, start_time: new Date().toISOString() })
-            .select('id')
-            .single();
-
-        if (newAttemptError) return { success: false, message: `Failed to create new attempt: ${newAttemptError.message}` };
-        attempt = newAttempt;
-    }
-
-    // Fetch exam questions
-    const { data: questions, error: questionsError } = await supabase
-        .from('exam_questions')
-        .select('*, questions(*, question_options(*))')
-        .eq('exam_id', examId)
-        .order('display_order');
-
-    if (questionsError) return { success: false, message: `Failed to fetch questions: ${questionsError.message}` };
-
-    const formattedQuestions = questions.map(q => ({
-        ...(q.questions as any),
-        options: q.questions.question_options
-    }));
-
-    return { success: true, questions: formattedQuestions, attemptId: attempt.id };
+export interface Question {
+    id: string;
+    question: string;
+    options: string[];
+    answer: string;
 }
 
-export async function submitExamAction(attemptId: number, answers: Record<number, number>) {
-    const supabase = await createSupabaseServerClient();
+export type PublicQuestion = Omit<Question, 'answer'>;
 
-    // 1. Get all questions for the exam to check answers against
-    const { data: attemptData } = await supabase.from('attempts').select('exam_id').eq('id', attemptId).single();
-    if (!attemptData) return { success: false, message: "Attempt not found" };
+async function parseQuestions(content: string): Promise<Omit<Question, 'id'>[]> {
+    const questions: Omit<Question, 'id'>[] = [];
+    const lines = content.split('\n');
+    let currentQuestion: Partial<Omit<Question, 'id'> & { question: string }> = {};
 
-    const { data: correctOptions } = await supabase
-        .from('question_options')
-        .select('question_id, id')
-        .eq('is_correct', true)
-        .in('question_id', Object.keys(answers).map(Number));
+    for (const line of lines) {
+        const questionMatch = line.match(/^(\d+)\.\s+(.*)/);
+        if (questionMatch) {
+            if (currentQuestion.question) {
+                questions.push(currentQuestion as Omit<Question, 'id'>);
+            }
+            currentQuestion = { question: questionMatch[2].trim(), options: [] };
+        } else if (currentQuestion.question) {
+            const optionMatch = line.match(/^([A-D])\)\s+(.*)/);
+            if (optionMatch) {
+                currentQuestion.options?.push(optionMatch[2].trim());
+            } else {
+                const answerMatch = line.match(/^Answer:\s+([A-D])/);
+                if (answerMatch) {
+                    currentQuestion.answer = answerMatch[1];
+                }
+            }
+        }
+    }
 
-    if (!correctOptions) return { success: false, message: "Couldn't verify answers" };
+    if (currentQuestion.question) {
+        questions.push(currentQuestion as Omit<Question, 'id'>);
+    }
 
-    const correctAnswersMap = new Map(correctOptions.map(o => [o.question_id, o.id]));
+    return questions;
+}
 
-    // 2. Grade the answers
-    let score = 0;
-    const attemptAnswers = Object.entries(answers).map(([questionIdStr, selectedOptionId]) => {
-        const questionId = Number(questionIdStr);
-        const correctOptionId = correctAnswersMap.get(questionId);
-        const isCorrect = correctOptionId === selectedOptionId;
-        if (isCorrect) score++;
-        return {
-            attempt_id: attemptId,
-            question_id: questionId,
-            selected_option_id: selectedOptionId,
-            is_correct: isCorrect,
-        };
+export async function getOrCreateQuestions(examId: string): Promise<PublicQuestion[]> {
+    const examRef = doc(db, 'exams', examId);
+    const questionsCollectionRef = collection(examRef, 'questions');
+
+    const questionsSnapshot = await getDocs(questionsCollectionRef);
+    if (!questionsSnapshot.empty) {
+        return questionsSnapshot.docs.map(doc => {
+            const { answer, ...rest } = doc.data();
+            return { id: doc.id, ...rest } as PublicQuestion;
+        });
+    }
+
+    const examDoc = await getDoc(examRef);
+    if (!examDoc.exists()) {
+        throw new Error('Exam not found');
+    }
+
+    const examData = examDoc.data();
+    const questionsToCreate = await parseQuestions(examData.content);
+
+    for (const q of questionsToCreate) {
+        await addDoc(questionsCollectionRef, q);
+    }
+
+    const newQuestionsSnapshot = await getDocs(questionsCollectionRef);
+    return newQuestionsSnapshot.docs.map(doc => {
+        const { answer, ...rest } = doc.data();
+        return { id: doc.id, ...rest } as PublicQuestion;
     });
-    
-    const finalScore = (score / Object.keys(answers).length) * 100;
-
-    // 3. Save the answers and update the attempt record
-    const { error: saveError } = await supabase.from('attempt_answers').insert(attemptAnswers);
-    if (saveError) return { success: false, message: `Failed to save answers: ${saveError.message}` };
-
-    const { error: updateError } = await supabase
-        .from('attempts')
-        .update({ is_submitted: true, end_time: new Date().toISOString(), score: finalScore })
-        .eq('id', attemptId);
-
-    if (updateError) return { success: false, message: `Failed to finalize attempt: ${updateError.message}` };
-
-    return { success: true, message: 'Exam submitted successfully!', attemptId: attemptId };
 }

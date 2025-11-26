@@ -10,5 +10,11 @@
     "frameworksBackend": {
       "region": "asia-southeast1"
     }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
