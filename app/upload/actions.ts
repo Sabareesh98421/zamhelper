@@ -58,7 +58,7 @@ export async function uploadPdf(formData: FormData) {
         const { error: dbError } = await supabase
             .from('pdf_uploads')
             .insert({
-                name: sanitizedFileName,
+                file_name: sanitizedFileName,
                 content: sanitizedContent,
                 storage_path: downloadURL, // Store the public URL from Firebase
             });
