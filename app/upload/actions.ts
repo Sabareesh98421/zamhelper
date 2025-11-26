@@ -1,72 +1,70 @@
-
 'use server'
 
 import { PDFParse } from 'pdf-parse';
-import { db, storage } from '@/app/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes } from 'firebase/storage';
+import { supabase } from '@/app/lib/supabase';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as yup from 'yup';
 import sanitizeHtml from 'sanitize-html';
 
+// Securely initialize Firebase from environment variables
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+// Initialize Firebase only once to avoid errors
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const storage = getStorage(app);
+
 const fileSchema = yup.object().shape({
   file: yup
-    .mixed()
+    .mixed<File>()
     .required('File is required')
     .test('is-pdf', 'File must be a PDF', (value) => {
-        if (value instanceof File) {
-            return value.type === 'application/pdf';
-        }
-        return false;
+        return value instanceof File && value.type === 'application/pdf';
     }),
 });
 
 export async function uploadPdf(formData: FormData) {
     try {
         const file = formData.get('file') as File;
-
         await fileSchema.validate({ file });
 
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Sanitize the file name to prevent path traversal and other attacks
         const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '');
         if (!sanitizedFileName) {
             return { message: 'Invalid file name.' };
         }
 
-        let storagePath;
-        try {
-            // Upload the PDF to Firebase Storage
-            const storageRef = ref(storage, `exams/${sanitizedFileName}`);
-            const uploadResult = await uploadBytes(storageRef, buffer);
-            storagePath = uploadResult.ref.fullPath;
-        } catch (storageError) {
-            console.error('Error uploading to Firebase Storage:', storageError);
-            const errorMessage = (storageError as Error).message || 'An unknown storage error occurred.';
-            return { message: `Storage Error: ${errorMessage}` };
-        }
-
+        // 1. Upload to Firebase Storage
+        const storageRef = ref(storage, `exams/${sanitizedFileName}`);
+        await uploadBytes(storageRef, buffer);
+        const downloadURL = await getDownloadURL(storageRef);
 
         // Parse the PDF content
-        const parser = new PDFParse({ data: buffer });
-        const data = await parser.getText();
-
-        // Sanitize the parsed content to prevent XSS
+        const data = await new PDFParse({ data: buffer }).getText();
         const sanitizedContent = sanitizeHtml(data.text);
 
-        try {
-            // Save the parsed and sanitized content to Firestore
-            await addDoc(collection(db, 'exams'), {
+        // 2. Save metadata to Supabase, including the Firebase Storage URL
+        const { error: dbError } = await supabase
+            .from('pdf_uploads')
+            .insert({
                 name: sanitizedFileName,
                 content: sanitizedContent,
-                storagePath: storagePath,
-                createdAt: new Date(),
+                storage_path: downloadURL, // Store the public URL from Firebase
             });
-        } catch (firestoreError) {
-             console.error('Error saving to Firestore:', firestoreError);
-             const errorMessage = (firestoreError as Error).message || 'An unknown database error occurred.';
-            return { message: `Firestore Error: ${errorMessage}` };
+        
+        if (dbError) {
+            // If the database insert fails, we should ideally delete the file from storage.
+            // This part can be made more robust, but for now, we throw the error.
+            throw dbError;
         }
 
         return { message: 'PDF uploaded and parsed successfully!' };

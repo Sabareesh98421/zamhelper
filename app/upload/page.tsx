@@ -4,8 +4,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { uploadPdf } from './actions';
 import { FiUploadCloud } from 'react-icons/fi';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '../lib/firebase';
+import { supabase } from '@/app/lib/supabase'; // Using Supabase client
+import type { User } from '@supabase/supabase-js'; // Using Supabase User type
 import Link from 'next/link';
 
 export default function UploadPage() {
@@ -18,14 +18,23 @@ export default function UploadPage() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getAuth(app);
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    // Supabase auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
       setAuthLoading(false);
     });
 
+    // Check initial user session
+    async function getUser() {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        setAuthLoading(false);
+    }
+
+    getUser();
+
     // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,9 +89,9 @@ export default function UploadPage() {
     try {
       const result = await uploadPdf(formData);
       if (result.message.includes('successfully')) {
-        setMessage(`Success: ${selectedFile.name} has been uploaded and stored in the public folder.`)
+        setMessage(`Success: ${selectedFile.name} has been uploaded and stored.`);
       } else {
-        setMessage(`Error: ${result.message}`)
+        setMessage(`Error: ${result.message}`);
       }
       setSelectedFile(null);
       if(fileInputRef.current) {

@@ -2,12 +2,11 @@
 'use client'
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '@/app/lib/firebase';
+import { supabase } from '@/app/lib/supabase';
 
 interface Exam {
   id: string;
-  name: string;
+  file_name: string; // Corrected from 'name' to 'file_name'
 }
 
 export default function Home() {
@@ -15,13 +14,17 @@ export default function Home() {
 
   useEffect(() => {
     const fetchExams = async () => {
-      const q = query(collection(db, 'exams'), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const examsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      }));
-      setExams(examsData);
+      // Select 'file_name' to match the database schema
+      const { data: examsData, error } = await supabase
+        .from('pdf_uploads')
+        .select('id, file_name') // Corrected column name
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching exams:', error);
+      } else if (examsData) {
+        setExams(examsData);
+      }
     };
     fetchExams();
   }, []);
@@ -37,15 +40,20 @@ export default function Home() {
       </div>
       <div className="py-16">
         <h2 className="text-3xl font-bold mb-8 text-center">Recently Uploaded Exams</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {exams.map((exam) => (
-            <Link key={exam.id} href={`/exam/${exam.id}`}>
-              <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{exam.name}</h5>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {exams.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {exams.map((exam) => (
+              <Link key={exam.id} href={`/exam/${exam.id}`}>
+                <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
+                  {/* Display file_name */}
+                  <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{exam.file_name}</h5>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500">No exams have been uploaded yet.</p>
+        )}
       </div>
     </div>
   );

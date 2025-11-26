@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "zamhelper",
+    "site": "zamhelper-240302",
     "source": ".",
     "ignore": [
       "firebase.json",

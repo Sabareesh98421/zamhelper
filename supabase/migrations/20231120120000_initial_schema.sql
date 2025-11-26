@@ -109,10 +109,12 @@ ALTER TABLE attempt_answers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE parsing_faults ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for Profiles
-CREATE POLICY "Users can view their own profile" ON profiles
+CREATE POLICY "Users can view their own profile." ON profiles
     FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Admins can view all profiles" ON profiles
-    FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Users can update their own profile." ON profiles
+    FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins can view all profiles." ON profiles
+    FOR SELECT USING (get_my_claim('admin') IS NOT NULL);
 
 -- RLS Policies for PDF Uploads
 CREATE POLICY "Admins can manage PDF uploads" ON pdf_uploads
