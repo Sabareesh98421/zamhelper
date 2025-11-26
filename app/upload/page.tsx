@@ -2,9 +2,10 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { uploadPdf } from './actions';
 import { FiUploadCloud } from 'react-icons/fi';
-import { createClient } from '@/app/lib/supabase/client'; // Correct import
+import { createClient } from '@/app/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 
@@ -16,6 +17,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const router = useRouter(); // Initialize the router
 
   // Create a single Supabase client instance
   const supabase = createClient();
@@ -81,26 +83,33 @@ export default function UploadPage() {
     }
 
     setIsUploading(true);
-    setMessage('Uploading...');
+    setMessage('Uploading and processing...');
 
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
       const result = await uploadPdf(formData);
-      if (result.message.includes('successfully')) {
-        setMessage(`Success: ${selectedFile.name} has been uploaded and stored.`);
+      
+      if (result.success && result.uploadId) {
+        // On success, redirect to the parsing page
+        router.push(`/admin/uploads/${result.uploadId}/parse`);
       } else {
-        setMessage(`Error: ${result.message}`);
+        // On failure, display the error message
+        setMessage(`Error: ${result.message || 'An unknown error occurred.'}`);
+        setIsUploading(false); // Stop loading on failure
       }
-      setSelectedFile(null);
-      if(fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      
+      // Do not clear the file input here, as we are redirecting
+      // setSelectedFile(null);
+      // if(fileInputRef.current) {
+      //   fileInputRef.current.value = '';
+      // }
     } catch (error) {
-      setMessage('An unexpected error occurred.');
+      setMessage('An unexpected client-side error occurred.');
+      setIsUploading(false);
     }
-    setIsUploading(false);
+    // We don't set isUploading to false here on success because the page will redirect
   };
 
   if (authLoading) {
@@ -160,7 +169,7 @@ export default function UploadPage() {
                     type="submit" 
                     disabled={!selectedFile || isUploading}
                     className="w-full mt-6 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
-                    {isUploading ? 'Uploading...' : 'Upload & Process PDF'}
+                    {isUploading ? 'Uploading & Processing...' : 'Upload & Process PDF'}
                 </button>
 
                 {message && (

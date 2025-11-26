@@ -1,9 +1,7 @@
 'use server'
 
-import { PDFParse } from 'pdf-parse';
 import { createClient } from '@/app/lib/supabase/server';
 import * as yup from 'yup';
-import sanitizeHtml from 'sanitize-html';
 import { adminStorage } from '@/app/lib/firebase/admin';
 
 const fileSchema = yup.object().shape({
@@ -17,6 +15,11 @@ const fileSchema = yup.object().shape({
 
 export async function uploadPdf(formData: FormData) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, message: 'You must be logged in to upload a file.' };
+    }
 
     try {
         const file = formData.get('file') as File;
@@ -25,12 +28,9 @@ export async function uploadPdf(formData: FormData) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '');
-        if (!sanitizedFileName) {
-            return { message: 'Invalid file name.' };
-        }
+        const sanitizedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
 
-        // 1. Upload to Firebase Storage using the Admin SDK
+        // 1. Upload to Firebase Storage
         const bucket = adminStorage.bucket();
         const fileUpload = bucket.file(`exams/${sanitizedFileName}`);
         
@@ -40,33 +40,41 @@ export async function uploadPdf(formData: FormData) {
             },
         });
 
-        // The public URL can be constructed directly
         const downloadURL = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
 
-        // Parse the PDF content
-        const data = await new PDFParse({ data: buffer }).getText();
-        const sanitizedContent = sanitizeHtml(data.text);
-
         // 2. Save metadata to Supabase
-        const { error: dbError } = await supabase
+        const { data, error: dbError } = await supabase
             .from('pdf_uploads')
             .insert({
                 file_name: sanitizedFileName,
-                content: sanitizedContent,
                 storage_path: downloadURL,
-            });
+                uploaded_by: user.id,
+                status: 'pending'
+            })
+            .select('id')
+            .single();
         
         if (dbError) {
-            throw dbError;
+            throw new Error(`Database error: ${dbError.message}`);
         }
 
-        return { message: 'PDF uploaded and parsed successfully!' };
-    } catch (error) {
-        if (error instanceof yup.ValidationError) {
-            return { message: error.message };
+        if (!data || !data.id) {
+            throw new Error('Failed to get upload ID after insert.');
         }
+
+        return { success: true, message: 'PDF uploaded successfully!', uploadId: data.id };
+
+    } catch (error) {
+        let errorMessage;
+        if (error instanceof yup.ValidationError) {
+            errorMessage = error.message;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        } else {
+            errorMessage = 'An unknown error occurred.';
+        }
+        
         console.error('Error uploading PDF:', error);
-        const errorMessage = (error as Error).message || 'An unknown error occurred.';
-        return { message: `An unexpected error occurred: ${errorMessage}` };
+        return { success: false, message: errorMessage };
     }
 }
