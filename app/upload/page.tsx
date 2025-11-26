@@ -4,8 +4,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { uploadPdf } from './actions';
 import { FiUploadCloud } from 'react-icons/fi';
-import { supabase } from '@/app/lib/supabase'; // Using Supabase client
-import type { User } from '@supabase/supabase-js'; // Using Supabase User type
+import { createClient } from '@/app/lib/supabase/client'; // Correct import
+import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 
 export default function UploadPage() {
@@ -17,14 +17,15 @@ export default function UploadPage() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Create a single Supabase client instance
+  const supabase = createClient();
+
   useEffect(() => {
-    // Supabase auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
 
-    // Check initial user session
     async function getUser() {
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
@@ -33,9 +34,8 @@ export default function UploadPage() {
 
     getUser();
 
-    // Cleanup subscription on unmount
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase.auth]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

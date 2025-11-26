@@ -8,7 +8,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 export const dynamic = 'force-dynamic';
 
 const AdminDashboardPage = async () => {
-  let stats = [
+  const stats = [
     { name: 'Total Users', stat: '0', icon: UsersIcon },
     { name: 'Total PDFs Uploaded', stat: '0', icon: DocumentDuplicateIcon },
     { name: 'Total Exam Attempts', stat: '0', icon: CheckBadgeIcon },

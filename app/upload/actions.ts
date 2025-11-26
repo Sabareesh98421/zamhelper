@@ -1,7 +1,7 @@
 'use server'
 
 import { PDFParse } from 'pdf-parse';
-import { supabase } from '@/app/lib/supabase';
+import { createClient } from '@/app/lib/supabase/server'; // Correct import
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import * as yup from 'yup';
@@ -31,6 +31,8 @@ const fileSchema = yup.object().shape({
 });
 
 export async function uploadPdf(formData: FormData) {
+    const supabase = await createClient(); // Create server client
+
     try {
         const file = formData.get('file') as File;
         await fileSchema.validate({ file });
