@@ -1,80 +1,70 @@
-'use server'
 
-import { createClient } from '@/app/lib/supabase/server';
-import * as yup from 'yup';
-import { adminStorage } from '@/app/lib/firebase/admin';
+"use server";
 
-const fileSchema = yup.object().shape({
-  file: yup
-    .mixed<File>()
-    .required('File is required')
-    .test('is-pdf', 'File must be a PDF', (value) => {
-        return value instanceof File && value.type === 'application/pdf';
-    }),
-});
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { adminStorage } from "@/app/lib/firebase-admin";
+import { v4 as uuidv4 } from "uuid";
 
 export async function uploadPdf(formData: FormData) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        return { success: false, message: 'You must be logged in to upload a file.' };
+    console.log("[Server Action: uploadPdf] Received request for sanitization and storage.");
+    
+    // Add a check to ensure Firebase Admin SDK is initialized
+    if (!adminStorage) {
+        console.error("[Server Action: uploadPdf] Firebase Admin SDK not initialized. Storage is unavailable.");
+        return { success: false, message: "Storage service is not configured. Please contact support." };
     }
 
+    const supabase = await createSupabaseServerClient();
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+
+    if (!user) {
+        console.error("[Server Action: uploadPdf] No user session found.");
+        return { success: false, message: "Not authorized" };
+    }
+
+    const file = formData.get("file") as File;
+
+    if (!file || typeof file.arrayBuffer !== 'function' || file.type !== 'application/pdf') {
+        return { success: false, message: "Invalid file. Please upload a PDF." };
+    }
+
+    const fileName = `${uuidv4()}-${file.name}`;
+    const storagePath = `uploads/${user.id}/${fileName}`;
+
     try {
-        const file = formData.get('file') as File;
-        await fileSchema.validate({ file });
-
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
-        const sanitizedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '')}`;
-
-        // 1. Upload to Firebase Storage
-        const bucket = adminStorage.bucket();
-        const fileUpload = bucket.file(`exams/${sanitizedFileName}`);
+        const fileBuffer = Buffer.from(await file.arrayBuffer());
         
-        await fileUpload.save(buffer, {
-            metadata: {
-                contentType: file.type,
-            },
+        // Since adminStorage is a bucket instance, we can use it directly
+        await adminStorage.file(storagePath).save(fileBuffer, {
+            metadata: { contentType: file.type },
         });
 
-        const downloadURL = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
-
-        // 2. Save metadata to Supabase
-        const { data, error: dbError } = await supabase
-            .from('pdf_uploads')
-            .insert({
-                file_name: sanitizedFileName,
-                storage_path: downloadURL,
-                uploaded_by: user.id,
-                status: 'pending'
+        const { data: uploadData, error: uploadError } = await supabase
+            .from("uploads")
+            .insert({ 
+                file_name: file.name, 
+                storage_path: storagePath, 
+                status: "uploaded",
+                user_id: user.id 
             })
-            .select('id')
+            .select("id")
             .single();
-        
-        if (dbError) {
-            throw new Error(`Database error: ${dbError.message}`);
+
+        if (uploadError) {
+            console.error("[Server Action] Supabase insert error:", uploadError);
+            return { success: false, message: "Could not save file metadata." };
         }
 
-        if (!data || !data.id) {
-            throw new Error('Failed to get upload ID after insert.');
-        }
+        console.log(`[Server Action: uploadPdf] File sanitized and stored. Upload ID: ${uploadData.id}`);
+        return { success: true, uploadId: uploadData.id };
 
-        return { success: true, message: 'PDF uploaded successfully!', uploadId: data.id };
-
-    } catch (error) {
-        let errorMessage;
-        if (error instanceof yup.ValidationError) {
-            errorMessage = error.message;
-        } else if (error instanceof Error) {
-            errorMessage = error.message;
-        } else {
-            errorMessage = 'An unknown error occurred.';
-        }
-        
-        console.error('Error uploading PDF:', error);
-        return { success: false, message: errorMessage };
+    } catch (err: any) {
+        console.error("[Server Action] An unexpected error occurred during upload:", err);
+        return {
+            success: false,
+            message: `Failed to upload: ${err.message || "An unknown error occurred."}`,
+        };
     }
 }

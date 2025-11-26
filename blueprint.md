@@ -1,48 +1,31 @@
 
-# Project Blueprint: ZamHelper
+# Blueprint: AI-Powered Exam Generator
 
-## 1. Overview
+## Overview
 
-ZamHelper is a comprehensive online examination and learning platform. It allows students to take practice exams, review their results, and track their progress. It also provides an administrative interface for managing exams, questions, and user data.
+This application allows users to upload PDF documents, from which the system will automatically generate multiple-choice exam questions using AI. Users can then take these exams and review their results. The application uses Next.js for the frontend, Supabase for the database and authentication, and Firebase Storage for file storage.
 
-## 2. Implemented Features & Design
+## Features & Design
 
-### Authentication & User Experience (V3 - Current)
+### Implemented
+*   **User Authentication:** Users can sign up and log in using Supabase Auth.
+*   **PDF Upload:** Authenticated users can upload PDF files.
+*   **File Storage:** Uploaded PDFs are stored in a dedicated Firebase Storage bucket.
+*   **Database:** Upload metadata is stored in a Supabase `uploads` table.
 
-- **Dedicated Login/Signup Pages:** Users are directed to clear, dedicated pages for `/login` and `/signup`, resolving previous 404 errors and providing a standard user experience.
-- **Dynamic Navigation Bar:** The main navigation bar now dynamically shows "Login" and "Sign Up" buttons for guest users and a "Sign Out" button for authenticated users.
-- **OAuth Integration:** User authentication is handled via Google OAuth, powered by Supabase Auth.
-- **Centralized Auth Logic:** All authentication actions (login, logout) and callbacks are managed cleanly within the `app/auth/` directory.
+### Styling & Design
+*   **UI:** Modern, clean interface using Tailwind CSS.
+*   **Layout:** Responsive design for both desktop and mobile.
+*   **Components:** Reusable components for UI elements like buttons, forms, and notifications.
+*   **Iconography:** Using Heroicons for clear and intuitive icons.
+*   **Feedback:** Snackbar notifications for user actions (e.g., "Upload successful").
 
-### Student-Facing Features
+## Current Plan
 
-- **Practice Exams:** Students can take practice exams composed of multiple-choice questions.
-- **Exam Results:** After completing an exam, students can see their score and review their answers.
-- **Past Attempts:** Students can view a history of their past exam attempts.
-- **PDF Upload:** Users can upload PDF documents to Firebase Storage.
+**Objective:** Implement a complete, testable user flow from PDF upload to exam taking, while temporarily disabling the live AI question generation.
 
-### Admin Panel (V2 Complete & Secured)
-
-- **Role-Based Access Control:** The entire `/admin` section is protected. Only users with the `role` of `admin` can access these routes. Non-admins are redirected.
-- **Professional Layout:** A responsive sidebar layout for all admin pages.
-- **Dashboard:** A central dashboard (`/admin/dashboard`) to display key statistics.
-- **Manage PDF Uploads:** A page (`/admin/pdfs`) to view, download, and delete all PDFs in Firebase Storage using Server Actions.
-- **View All Attempts:** A page (`/admin/attempts`) for administrators to view all exam attempts from all users.
-
-### Design and Styling
-
-- **Framework:** Next.js with the App Router.
-- **Styling:** Tailwind CSS for a modern, utility-first approach.
-- **UI Components:** Consistent design for cards, buttons, and layouts.
-- **Icons:** Heroicons for a clean and professional look.
-- **Dark Mode:** The application includes a dark mode theme.
-
-## 3. Plan for Current Request: Finalizing Authentication Flow
-
-- **[COMPLETED]** Create dedicated `app/login/page.tsx` to resolve 404 error.
-- **[COMPLETED]** Create dedicated `app/signup/page.tsx` for a clear user registration path.
-- **[COMPLETED]** Update the main navigation component (`Nav.tsx`) to dynamically display authentication status (Login/Sign Up vs. Sign Out).
-- **[COMPLETED]** Remove old authentication components from the homepage (`app/page.tsx`).
-- **[COMPLETED]** Update `blueprint.md` to document the new, improved authentication flow.
-
-**All authentication-related issues are now resolved.**
+**Steps:**
+1.  **Modify the Upload Action:** After a PDF is successfully uploaded, insert a predefined set of mock exam questions into the `questions` table, linked to the new upload.
+2.  **Update Redirect:** Change the post-upload redirect to go directly to the exam review page, bypassing the non-functional AI parsing step.
+3.  **Create the Exam/Review Page:** Build the page where users can view and answer the questions associated with their upload.
+4.  **Create the Uploads List:** Develop a central dashboard page where users can see all their past uploads and navigate to the corresponding exam for each one.

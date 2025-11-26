@@ -22,7 +22,6 @@ const AdminDashboardPage = async () => {
       process.env.SUPABASE_SERVICE_KEY!
     );
 
-    // Fetch stats and recent activity in parallel
     const [userCountResult, attemptCountResult, pdfCountResult, recentAttemptsResult] = await Promise.all([
       supabaseAdmin.from('users').select('id', { count: 'exact' }),
       supabaseAdmin.from('attempts').select('id', { count: 'exact' }),
@@ -32,11 +31,11 @@ const AdminDashboardPage = async () => {
         .select(`
           id,
           score,
-          created_at,
+          start_time, // Corrected column name
           users ( email ),
           exams ( title )
         `)
-        .order('created_at', { ascending: false })
+        .order('start_time', { ascending: false }) // Corrected column name
         .limit(5)
     ]);
 
@@ -109,7 +108,7 @@ const AdminDashboardPage = async () => {
                       {attempt.score}%
                     </p>
                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatDistanceToNow(new Date(attempt.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(attempt.start_time), { addSuffix: true })}
                     </p>
                   </div>
                 </div>

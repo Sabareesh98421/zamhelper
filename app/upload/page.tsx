@@ -1,167 +1,96 @@
 
-'use client'
+"use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSnackbar } from '@/hooks/useSnackbar';
 import { uploadPdf } from './actions';
-import { FiUploadCloud } from 'react-icons/fi';
-import { createClient } from '@/app/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
-import Link from 'next/link';
-import { useSnackbar } from '@/hooks/useSnackbar'; // Import the useSnackbar hook
+import { ArrowUpTrayIcon } from '@heroicons/react/24/solid';
 
 export default function UploadPage() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const router = useRouter();
-  const { addMessage } = useSnackbar(); // Use the snackbar
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const router = useRouter();
+    const { addMessage } = useSnackbar();
 
-  const supabase = createClient();
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = event.target.files?.[0];
+        if (selectedFile) {
+            console.log(`[Client] File selected: ${selectedFile.name}, Size: ${selectedFile.size}`);
+            setFile(selectedFile);
+        }
+    };
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setAuthLoading(false);
-    });
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+        console.log("[Client] Upload form submitted.");
 
-    async function getUser() {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-        setAuthLoading(false);
-    }
+        if (!file) {
+            console.warn("[Client] No file selected for upload.");
+            addMessage("Please select a file first.", "warning");
+            return;
+        }
 
-    getUser();
+        setIsUploading(true);
+        console.log("[Client] Uploading started...");
+        addMessage("Uploading your document...", "info");
 
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+        const formData = new FormData();
+        formData.append("file", file);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type !== 'application/pdf') {
-        addMessage('Please select a PDF file.', 'error');
-        setSelectedFile(null);
-      } else {
-        setSelectedFile(file);
-      }
-    }
-  };
+        try {
+            const result = await uploadPdf(formData);
 
-  const handleDragOver = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setIsDragOver(true);
-  }, []);
+            if (result.success && result.uploadId) {
+                console.log(`[Client] Upload successful. Navigating to review page for ID: ${result.uploadId}`);
+                addMessage("Exam created successfully!", "success");
+                router.push(`/admin/uploads/${result.uploadId}/review`);
+            } else {
+                console.error("[Client] Upload failed:", result.message);
+                addMessage(result.message || "Upload failed. Please try again.", "error");
+            }
+        } catch (error: any) {
+            console.error("[Client] An unexpected error occurred during upload:", error);
+            addMessage("An unexpected error occurred.", "error");
+        } finally {
+            setIsUploading(false);
+            console.log("[Client] Uploading finished.");
+        }
+    };
 
-  const handleDragLeave = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-    const file = event.dataTransfer.files?.[0];
-    if (file && file.type === 'application/pdf') {
-        setSelectedFile(file);
-    } else {
-        addMessage('Please drop a PDF file.', 'error');
-        setSelectedFile(null);
-    }
-  }, [addMessage]);
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selectedFile) {
-      addMessage('Please select a file to upload.', 'error');
-      return;
-    }
-
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    try {
-      const result = await uploadPdf(formData);
-      
-      if (result.success && result.uploadId) {
-        addMessage('File uploaded successfully! Redirecting...', 'success');
-        router.push(`/admin/uploads/${result.uploadId}/parse`);
-      } else {
-        addMessage(result.message || 'An unknown error occurred.', 'error');
-        setIsUploading(false);
-      }
-    } catch (error) {
-      addMessage('An unexpected client-side error occurred.', 'error');
-      setIsUploading(false);
-    }
-  };
-
-  if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+        <div className="max-w-4xl mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-2xl">
+            <div className="text-center mb-10">
+                <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">Upload Your Document</h1>
+                <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Upload a PDF to automatically generate an exam.</p>
+            </div>
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center px-4">
-        <div className="max-w-lg w-full text-center">
-            <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-white">Access Denied</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">You must be logged in to upload exam papers.</p>
-            <Link href="/" className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-5 py-2.5">
-                Go to Login
-            </Link>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center items-center px-4">
-        <div className="max-w-lg w-full text-center">
-            <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-white">Upload Your Exam Paper</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">Drag and drop a PDF file or click to select a file.</p>
-            
-            <form onSubmit={handleSubmit}>
-                <label 
-                    htmlFor="file-upload"
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`flex justify-center items-center w-full h-64 px-6 transition bg-white dark:bg-gray-800 border-2 ${isDragOver ? 'border-blue-400' : 'border-gray-300 dark:border-gray-600'} border-dashed rounded-md cursor-pointer`}>
-                    <div className="space-y-1 text-center">
-                        <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">Click to upload</span>
-                            <p className="pl-1">or drag and drop</p>
+            <form onSubmit={handleSubmit} className="space-y-8">
+                 <div className="flex items-center justify-center w-full">
+                    <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <ArrowUpTrayIcon className="w-10 h-10 mb-3 text-gray-400" />
+                            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">PDF (MAX. 800x400px)</p>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">PDF only, up to 10MB</p>
-                    </div>
-                    <input id="file-upload" name="file" type="file" className="sr-only" ref={fileInputRef} onChange={handleFileChange} accept=".pdf" />
-                </label>
-
-                {selectedFile && (
-                <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-left">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Selected file:</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{selectedFile.name}</p>
+                        <input id="dropzone-file" type="file" className="hidden" onChange={handleFileChange} accept=".pdf" />
+                    </label>
                 </div>
+
+                {file && (
+                    <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+                        Selected file: <span className="font-medium">{file.name}</span>
+                    </div>
                 )}
 
-                <button 
-                    type="submit" 
-                    disabled={!selectedFile || isUploading}
-                    className="w-full mt-6 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
-                    {isUploading ? 'Uploading...' : 'Upload & Process PDF'}
+                <button
+                    type="submit"
+                    disabled={isUploading || !file}
+                    className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-300"
+                >
+                    {isUploading ? 'Uploading...' : 'Upload & Generate Exam'}
                 </button>
             </form>
         </div>
-    </div>
-  );
+    );
 }

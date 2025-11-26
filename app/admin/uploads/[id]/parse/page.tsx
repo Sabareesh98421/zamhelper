@@ -4,73 +4,57 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSnackbar } from '@/hooks/useSnackbar';
-import { parsePdfAction } from './actions';
+import { generateQuestions } from './actions';
 
 export default function ParsePdfPage() {
-    const [status, setStatus] = useState("Starting parsing process...");
+    const [status, setStatus] = useState("Initializing process...");
     const params = useParams();
     const router = useRouter();
     const { addMessage } = useSnackbar();
-    const pdfId = Number(params.id);
+    const uploadId = params.id as string;
 
     useEffect(() => {
-        if (!pdfId) {
-            addMessage("Invalid PDF ID.", "error");
+        if (!uploadId) {
+            setStatus("Error: No upload ID found.");
+            addMessage("Could not find the upload record.", "error");
             return;
         }
 
-        const processParsing = async () => {
-            setStatus(`Processing PDF ID: ${pdfId}... This may take a moment.`);
+        const processDocument = async () => {
             try {
-                const result = await parsePdfAction(pdfId);
+                setStatus("Analyzing document and generating questions...");
+                // Removed the second argument to match the expected type
+                addMessage("Starting to process your document.","info");
+
+                const result = await generateQuestions(uploadId);
+
                 if (result.success) {
-                    addMessage(result.message, "success");
-                    setStatus(result.message);
-                    setTimeout(() => router.push('/dashboard'), 3000);
+                    setStatus("Processing complete! Redirecting...");
+                    addMessage("Successfully generated questions!", "success");
+                    router.push(`/admin/uploads/${uploadId}/review`);
                 } else {
-                    addMessage(result.message, "error");
-                    setStatus("Parsing failed.");
+                    setStatus(`Error: ${result.message}`);
+                    addMessage(result.message || "An unknown error occurred.", "error");
                 }
-            } catch (err: any) {
-                addMessage(err.message || "An unknown error occurred.", "error");
+            } catch (error: any) {
+                console.error("[Client] Error during PDF processing:", error);
                 setStatus("An unexpected error occurred.");
+                addMessage(error.message || "Failed to process the document.", "error");
             }
         };
 
-        processParsing();
+        processDocument();
 
-    }, [pdfId, router, addMessage]);
+    }, [uploadId, router, addMessage]);
 
     return (
-        <div className="max-w-2xl mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Processing Document</h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2">Please wait while we analyze and extract questions from your PDF.</p>
+        <div className="max-w-2xl mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-2xl text-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Processing Document</h1>
+            <div className="mt-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
+                <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">{status}</p>
             </div>
-
-            <div className="mt-8">
-                <div className="relative pt-1">
-                    <div className="overflow-hidden h-4 mb-4 text-xs flex rounded bg-blue-200 dark:bg-blue-900">
-                        <div style={{ width: "100%" }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 animate-pulse"></div>
-                    </div>
-                </div>
-
-                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700">
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">Status:</p>
-                    <p className={`text-xl font-semibold mt-1 text-green-500'`}>
-                        {status}
-                    </p>
-                </div>
-            </div>
-
-            <div className="mt-8 text-center">
-                 <button 
-                    onClick={() => router.push('/dashboard')}
-                    className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
-                >
-                    Return to Dashboard
-                </button>
-            </div>
+            <p className="mt-8 text-sm text-gray-500 dark:text-gray-400">Please wait while we analyze the document and generate the exam questions. This may take a moment.</p>
         </div>
     );
 }
