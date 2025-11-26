@@ -1,25 +1,10 @@
 'use server'
 
 import { PDFParse } from 'pdf-parse';
-import { createClient } from '@/app/lib/supabase/server'; // Correct import
-import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { createClient } from '@/app/lib/supabase/server';
 import * as yup from 'yup';
 import sanitizeHtml from 'sanitize-html';
-
-// Securely initialize Firebase from environment variables
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-// Initialize Firebase only once to avoid errors
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const storage = getStorage(app);
+import { adminStorage } from '@/app/lib/firebase/admin';
 
 const fileSchema = yup.object().shape({
   file: yup
@@ -31,7 +16,7 @@ const fileSchema = yup.object().shape({
 });
 
 export async function uploadPdf(formData: FormData) {
-    const supabase = await createClient(); // Create server client
+    const supabase = await createClient();
 
     try {
         const file = formData.get('file') as File;
@@ -45,27 +30,33 @@ export async function uploadPdf(formData: FormData) {
             return { message: 'Invalid file name.' };
         }
 
-        // 1. Upload to Firebase Storage
-        const storageRef = ref(storage, `exams/${sanitizedFileName}`);
-        await uploadBytes(storageRef, buffer);
-        const downloadURL = await getDownloadURL(storageRef);
+        // 1. Upload to Firebase Storage using the Admin SDK
+        const bucket = adminStorage.bucket();
+        const fileUpload = bucket.file(`exams/${sanitizedFileName}`);
+        
+        await fileUpload.save(buffer, {
+            metadata: {
+                contentType: file.type,
+            },
+        });
+
+        // The public URL can be constructed directly
+        const downloadURL = `https://storage.googleapis.com/${bucket.name}/${fileUpload.name}`;
 
         // Parse the PDF content
         const data = await new PDFParse({ data: buffer }).getText();
         const sanitizedContent = sanitizeHtml(data.text);
 
-        // 2. Save metadata to Supabase, including the Firebase Storage URL
+        // 2. Save metadata to Supabase
         const { error: dbError } = await supabase
             .from('pdf_uploads')
             .insert({
                 file_name: sanitizedFileName,
                 content: sanitizedContent,
-                storage_path: downloadURL, // Store the public URL from Firebase
+                storage_path: downloadURL,
             });
         
         if (dbError) {
-            // If the database insert fails, we should ideally delete the file from storage.
-            // This part can be made more robust, but for now, we throw the error.
             throw dbError;
         }
 
