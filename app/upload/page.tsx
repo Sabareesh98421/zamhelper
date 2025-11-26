@@ -2,24 +2,24 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 import { uploadPdf } from './actions';
 import { FiUploadCloud } from 'react-icons/fi';
 import { createClient } from '@/app/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { useSnackbar } from '@/hooks/useSnackbar'; // Import the useSnackbar hook
 
 export default function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
+  const { addMessage } = useSnackbar(); // Use the snackbar
 
-  // Create a single Supabase client instance
   const supabase = createClient();
 
   useEffect(() => {
@@ -43,11 +43,10 @@ export default function UploadPage() {
     const file = event.target.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        setMessage('Please select a PDF file.');
+        addMessage('Please select a PDF file.', 'error');
         setSelectedFile(null);
       } else {
         setSelectedFile(file);
-        setMessage('');
       }
     }
   };
@@ -68,22 +67,20 @@ export default function UploadPage() {
     const file = event.dataTransfer.files?.[0];
     if (file && file.type === 'application/pdf') {
         setSelectedFile(file);
-        setMessage('');
     } else {
-        setMessage('Please drop a PDF file.');
+        addMessage('Please drop a PDF file.', 'error');
         setSelectedFile(null);
     }
-  }, []);
+  }, [addMessage]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedFile) {
-      setMessage('Please select a file to upload.');
+      addMessage('Please select a file to upload.', 'error');
       return;
     }
 
     setIsUploading(true);
-    setMessage('Uploading and processing...');
 
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -92,24 +89,16 @@ export default function UploadPage() {
       const result = await uploadPdf(formData);
       
       if (result.success && result.uploadId) {
-        // On success, redirect to the parsing page
+        addMessage('File uploaded successfully! Redirecting...', 'success');
         router.push(`/admin/uploads/${result.uploadId}/parse`);
       } else {
-        // On failure, display the error message
-        setMessage(`Error: ${result.message || 'An unknown error occurred.'}`);
-        setIsUploading(false); // Stop loading on failure
+        addMessage(result.message || 'An unknown error occurred.', 'error');
+        setIsUploading(false);
       }
-      
-      // Do not clear the file input here, as we are redirecting
-      // setSelectedFile(null);
-      // if(fileInputRef.current) {
-      //   fileInputRef.current.value = '';
-      // }
     } catch (error) {
-      setMessage('An unexpected client-side error occurred.');
+      addMessage('An unexpected client-side error occurred.', 'error');
       setIsUploading(false);
     }
-    // We don't set isUploading to false here on success because the page will redirect
   };
 
   if (authLoading) {
@@ -169,14 +158,8 @@ export default function UploadPage() {
                     type="submit" 
                     disabled={!selectedFile || isUploading}
                     className="w-full mt-6 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
-                    {isUploading ? 'Uploading & Processing...' : 'Upload & Process PDF'}
+                    {isUploading ? 'Uploading...' : 'Upload & Process PDF'}
                 </button>
-
-                {message && (
-                <div className={`mt-6 text-sm text-center ${message.startsWith('Error') ? 'text-red-500' : 'text-green-500'}`}>
-                    {message}
-                </div>
-                )}
             </form>
         </div>
     </div>

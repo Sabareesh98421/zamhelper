@@ -1,19 +1,21 @@
+
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSnackbar } from '@/hooks/useSnackbar';
 import { parsePdfAction } from './actions';
 
 export default function ParsePdfPage() {
     const [status, setStatus] = useState("Starting parsing process...");
-    const [error, setError] = useState<string | null>(null);
     const params = useParams();
     const router = useRouter();
+    const { addMessage } = useSnackbar();
     const pdfId = Number(params.id);
 
     useEffect(() => {
         if (!pdfId) {
-            setError("Invalid PDF ID.");
+            addMessage("Invalid PDF ID.", "error");
             return;
         }
 
@@ -22,22 +24,22 @@ export default function ParsePdfPage() {
             try {
                 const result = await parsePdfAction(pdfId);
                 if (result.success) {
+                    addMessage(result.message, "success");
                     setStatus(result.message);
-                    // Redirect to a success page or the dashboard after a short delay
                     setTimeout(() => router.push('/dashboard'), 3000);
                 } else {
-                    setError(result.message);
+                    addMessage(result.message, "error");
                     setStatus("Parsing failed.");
                 }
             } catch (err: any) {
-                setError(err.message || "An unknown error occurred.");
+                addMessage(err.message || "An unknown error occurred.", "error");
                 setStatus("An unexpected error occurred.");
             }
         };
 
         processParsing();
 
-    }, [pdfId, router]);
+    }, [pdfId, router, addMessage]);
 
     return (
         <div className="max-w-2xl mx-auto my-12 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
@@ -55,12 +57,9 @@ export default function ParsePdfPage() {
 
                 <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-700">
                     <p className="text-lg font-medium text-gray-800 dark:text-gray-200">Status:</p>
-                    <p className={`text-xl font-semibold mt-1 ${error ? 'text-red-500' : 'text-green-500'}`}>
+                    <p className={`text-xl font-semibold mt-1 text-green-500'`}>
                         {status}
                     </p>
-                    {error && (
-                        <p className="text-red-500 dark:text-red-400 mt-2 text-sm">Error details: {error}</p>
-                    )}
                 </div>
             </div>
 
