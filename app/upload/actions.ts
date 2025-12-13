@@ -7,7 +7,9 @@ import { v4 as uuidv4 } from "uuid";
 
 export async function uploadPdf(formData: FormData) {
     if (!adminStorage) {
-        throw new Error('Firebase Admin Storage is not initialized.');
+        const errorMessage = 'Firebase Admin Storage is not initialized.';
+        console.error(errorMessage);
+        return { success: false, error: errorMessage };
     }
 
     const supabase = await createSupabaseServerClient();
@@ -37,17 +39,11 @@ export async function uploadPdf(formData: FormData) {
             },
         });
 
-        const [url] = await remoteFile.getSignedUrl({
-            action: 'read',
-            expires: '03-09-2491'
-        });
-
-        const { data: pdfData, error: dbError } = await supabase.from('pdfs').insert({
+        const { data: pdfData, error: dbError } = await supabase.from('pdf_uploads').insert({
             file_name: fileName,
             storage_path: remoteFile.name,
             status: 'uploaded',
-            user_id: user.id,
-            download_url: url
+            uploaded_by: user.id
         }).select('id').single();
 
         if (dbError) {
