@@ -25,14 +25,14 @@ const AdminDashboardPage = async () => {
     const [userCountResult, attemptCountResult, pdfCountResult, recentAttemptsResult] = await Promise.all([
       supabaseAdmin.from('users').select('id', { count: 'exact' }),
       supabaseAdmin.from('attempts').select('id', { count: 'exact' }),
-      adminStorage ? adminStorage.getFiles() : Promise.resolve([[]]),
+      adminStorage ? adminStorage.bucket().getFiles() : Promise.resolve([[]]),
       supabaseAdmin
         .from('attempts')
         .select(`
           id,
           score,
           start_time, // Corrected column name
-          users ( email ),then 
+          users ( email ),
           exams ( title )
         `)
         .order('start_time', { ascending: false }) // Corrected column name

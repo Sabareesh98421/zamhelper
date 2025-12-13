@@ -30,10 +30,10 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
   const handleDownload = (fileName: string) => {
     startTransition(async () => {
       const result = await getDownloadUrl(fileName);
-      if (result.url) {
-        window.open(result.url, '_blank');
-      } else if (result.error) {
-        alert(`Error getting download link: ${result.error}`);
+      if (result) {
+        window.open(result, '_blank');
+      } else if (result) {
+        alert(`Error getting download link: ${result}`);
       }
     });
   };

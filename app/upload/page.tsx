@@ -46,8 +46,8 @@ export default function UploadPage() {
                 addMessage("Exam created successfully!", "success");
                 router.push(`/admin/uploads/${result.uploadId}/review`);
             } else {
-                console.error("[Client] Upload failed:", result.message);
-                addMessage(result.message || "Upload failed. Please try again.", "error");
+                console.error("[Client] Upload failed:", result.error);
+                addMessage(result.error || "Upload failed. Please try again.", "error");
             }
         } catch (error: any) {
             console.error("[Client] An unexpected error occurred during upload:", error);
