@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 export async function uploadPdf(formData: FormData) {
     if (!adminStorage) {
         const errorMessage = 'Firebase Admin Storage is not initialized.';
-        console.error(errorMessage);
+        console.error("Firebase Admin Error:", errorMessage);
         return { success: false, error: errorMessage };
     }
 
@@ -39,18 +39,79 @@ export async function uploadPdf(formData: FormData) {
             },
         });
 
+        // 1. Insert into pdf_uploads (Correct table name and status)
         const { data: pdfData, error: dbError } = await supabase.from('pdf_uploads').insert({
             file_name: fileName,
             storage_path: remoteFile.name,
-            status: 'uploaded',
+            status: 'pending', // Correct enum value
             uploaded_by: user.id
         }).select('id').single();
 
         if (dbError) {
-            throw new Error(`Database error: ${dbError.message}`);
+            throw new Error(`Database error (pdf_uploads): ${dbError.message}`);
         }
 
-        return { success: true, uploadId: pdfData.id, fileName };
+        const uploadId = pdfData.id;
+
+        // 2. Generate Mock Questions
+        const mockQuestions = [
+            {
+                text: "What is the primary capital of the implementation?",
+                options: [
+                    { text: "London", isCorrect: false },
+                    { text: "Paris", isCorrect: true },
+                    { text: "Berlin", isCorrect: false },
+                    { text: "Madrid", isCorrect: false }
+                ]
+            },
+            {
+                text: "Which protocol is used for secure web communication?",
+                options: [
+                    { text: "FTP", isCorrect: false },
+                    { text: "HTTP", isCorrect: false },
+                    { text: "HTTPS", isCorrect: true },
+                    { text: "SMTP", isCorrect: false }
+                ]
+            },
+            {
+                text: "What is the result of 2 + 2?",
+                options: [
+                    { text: "3", isCorrect: false },
+                    { text: "4", isCorrect: true },
+                    { text: "5", isCorrect: false },
+                    { text: "22", isCorrect: false }
+                ]
+            }
+        ];
+
+        // 3. Insert Questions and Options
+        for (const q of mockQuestions) {
+            // Insert Question
+            const { data: questionData, error: qError } = await supabase.from('questions').insert({
+                source_pdf_id: uploadId,
+                question_text: q.text,
+                explanation: "This is a mock explanation."
+            }).select('id').single();
+
+            if (qError) {
+                console.error("Error inserting question:", qError);
+                continue; // Skip options if question failed
+            }
+
+            // Insert Options for this Question
+            const optionsToInsert = q.options.map(opt => ({
+                question_id: questionData.id,
+                option_text: opt.text,
+                is_correct: opt.isCorrect
+            }));
+
+            const { error: oError } = await supabase.from('question_options').insert(optionsToInsert);
+            if (oError) {
+                console.error("Error inserting options:", oError);
+            }
+        }
+
+        return { success: true, uploadId: uploadId, fileName };
 
     } catch (error: any) {
         console.error('Error uploading file:', error);

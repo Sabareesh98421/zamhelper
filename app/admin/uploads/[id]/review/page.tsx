@@ -1,38 +1,57 @@
 
-import { createSupabaseServerClient } from "@/lib/supabase/server"; // Correctly import the utility
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import ExamClient from "./ExamClient";
 
-// Define the types for our data structure to ensure type safety
+// Define the types matching the DB structure
+type QuestionOption = {
+    id: number;
+    option_text: string;
+    is_correct: boolean;
+};
+
 type Question = {
-    id: string;
-    question: string;
-    answers: string[];
-    correctAnswer: number;
+    id: number;
+    question_text: string;
+    question_options: QuestionOption[];
 };
 
 type Upload = {
-    id: string;
+    id: string; // The schema says pdf_uploads.id is integer, but let's check if the generic 'Upload' type was assuming string before. Schema says integer. The params.id is string from URL.
     file_name: string;
     questions: Question[];
 };
 
 async function getUploadData(uploadId: string): Promise<Upload | null> {
-    // Use the centralized utility to create the Supabase client
     const supabase = await createSupabaseServerClient();
 
-    // Explicitly type the expected shape of the data from Supabase
     const { data } = await supabase
-        .from('uploads')
-        .select('id, file_name, questions (*)')
+        .from('pdf_uploads') // Correct Table
+        .select(`
+            id, 
+            file_name, 
+            questions (
+                id,
+                question_text,
+                question_options (
+                    id,
+                    option_text,
+                    is_correct
+                )
+            )
+        `)
         .eq('id', uploadId)
         .single();
 
-    return data as Upload | null;
+    return data as any; // Cast to any because Supabase types might be strict/auto-generated and disjoint from our manual types here
 }
 
-export default async function ReviewPage({ params }: { params: { id: string } }) {
-    const upload = await getUploadData(params.id);
+export default async function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
+    // Next.js 15 params are promises
+    const { id } = await params;
+
+    // Ensure ID is valid integer before querying if schema demands it, or just pass it if supabase handles casting string->int
+    const upload = await getUploadData(id);
 
     if (!upload || !upload.questions) {
         notFound();
@@ -45,8 +64,7 @@ export default async function ReviewPage({ params }: { params: { id: string } })
                 <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Answer the questions below to the best of your ability.</p>
             </div>
 
-            {/* Render the interactive client component, passing the questions and uploadId as props */}
-            <ExamClient questions={upload.questions} uploadId={upload.id} />
+            <ExamClient questions={upload.questions} uploadId={upload.id.toString()} />
 
         </div>
     );

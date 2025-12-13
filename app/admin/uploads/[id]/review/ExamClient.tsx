@@ -4,11 +4,16 @@
 import { useState } from 'react';
 
 // Define types for better readability and maintenance
+type QuestionOption = {
+    id: number;
+    option_text: string;
+    is_correct: boolean;
+};
+
 type Question = {
-    id: string;
-    question: string;
-    answers: string[];
-    correctAnswer: number; // Index of the correct answer
+    id: number;
+    question_text: string;
+    question_options: QuestionOption[];
 };
 
 type ExamClientProps = {
@@ -17,23 +22,28 @@ type ExamClientProps = {
 };
 
 export default function ExamClient({ questions, uploadId }: ExamClientProps) {
-    const [userAnswers, setUserAnswers] = useState<number[]>(Array(questions.length).fill(-1));
+    // Map question ID to selected Option ID
+    const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [submitted, setSubmitted] = useState(false);
     const [score, setScore] = useState(0);
 
-    const handleAnswerChange = (questionIndex: number, answerIndex: number) => {
+    const handleAnswerChange = (questionId: number, optionId: number) => {
         if (submitted) return; // Don't allow changes after submission
 
-        const newAnswers = [...userAnswers];
-        newAnswers[questionIndex] = answerIndex;
-        setUserAnswers(newAnswers);
+        setUserAnswers(prev => ({
+            ...prev,
+            [questionId]: optionId
+        }));
     };
 
     const handleSubmit = () => {
         // Calculate score
         let correctCount = 0;
-        questions.forEach((q, index) => {
-            if (userAnswers[index] === q.correctAnswer) {
+        questions.forEach((q) => {
+            const selectedOptionId = userAnswers[q.id];
+            const correctOption = q.question_options.find(opt => opt.is_correct);
+
+            if (correctOption && selectedOptionId === correctOption.id) {
                 correctCount++;
             }
         });
@@ -43,22 +53,21 @@ export default function ExamClient({ questions, uploadId }: ExamClientProps) {
     };
 
     // Helper to determine styling based on the answer's state
-    const getAnswerClassName = (questionIndex: number, answerIndex: number) => {
+    const getAnswerClassName = (questionId: number, option: QuestionOption) => {
+        const isSelected = userAnswers[questionId] === option.id;
+
         if (!submitted) {
             // Before submission, just highlight the selected answer
-            return userAnswers[questionIndex] === answerIndex 
-                ? 'bg-indigo-200 dark:bg-indigo-900' 
+            return isSelected
+                ? 'bg-indigo-200 dark:bg-indigo-900'
                 : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600';
         }
 
         // After submission, show correct/incorrect answers
-        const isCorrect = questions[questionIndex].correctAnswer === answerIndex;
-        const isSelected = userAnswers[questionIndex] === answerIndex;
-
-        if (isCorrect) {
+        if (option.is_correct) {
             return 'bg-green-200 dark:bg-green-800'; // Correct answer
         }
-        if (isSelected && !isCorrect) {
+        if (isSelected && !option.is_correct) {
             return 'bg-red-200 dark:bg-red-800'; // User's incorrect choice
         }
         return 'bg-gray-50 dark:bg-gray-700'; // Default, unselected answer
@@ -75,15 +84,15 @@ export default function ExamClient({ questions, uploadId }: ExamClientProps) {
 
             {questions.map((q, index) => (
                 <div key={q.id} className="p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
-                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{index + 1}. {q.question}</p>
+                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{index + 1}. {q.question_text}</p>
                     <div className="mt-4 space-y-3">
-                        {q.answers.map((answer, ansIndex) => (
+                        {q.question_options.map((option) => (
                             <button
-                                key={ansIndex}
+                                key={option.id}
                                 disabled={submitted}
-                                onClick={() => handleAnswerChange(index, ansIndex)}
-                                className={`w-full text-left flex items-center p-3 rounded-lg transition-colors duration-200 ${getAnswerClassName(index, ansIndex)}`}>
-                                <span className="text-gray-800 dark:text-gray-200">{answer}</span>
+                                onClick={() => handleAnswerChange(q.id, option.id)}
+                                className={`w-full text-left flex items-center p-3 rounded-lg transition-colors duration-200 ${getAnswerClassName(q.id, option)}`}>
+                                <span className="text-gray-800 dark:text-gray-200">{option.option_text}</span>
                             </button>
                         ))}
                     </div>
@@ -92,11 +101,11 @@ export default function ExamClient({ questions, uploadId }: ExamClientProps) {
 
             {!submitted && (
                 <div className="text-center mt-10">
-                    <button 
+                    <button
                         onClick={handleSubmit}
                         className="py-3 px-8 text-lg font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400"
-                        disabled={userAnswers.includes(-1)} // Disable if not all questions are answered
-                        >
+                        disabled={Object.keys(userAnswers).length !== questions.length} // Disable if not all questions are answered
+                    >
                         Submit Exam
                     </button>
                 </div>
