@@ -23,7 +23,11 @@ const ManagePdfsPage = async () => {
       throw new Error('Firebase Admin Storage is not initialized. Check your server configuration.');
     }
 
-    const [allFiles] = await adminStorage.getFiles();
+    const bucket = adminStorage.bucket();
+    if (!bucket) {
+        throw new Error('Firebase Storage bucket is not available. Check your storageBucket setting in firebase-admin.ts.');
+    }
+    const [allFiles] = await bucket.getFiles();
     files = allFiles.map(file => ({
       name: file.name,
       size: file.metadata.size ? parseInt(file.metadata.size as string, 10) : 0,

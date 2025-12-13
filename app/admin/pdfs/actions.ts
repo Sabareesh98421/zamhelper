@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminStorage } from '@/app/lib/firebase-admin';
@@ -6,44 +5,32 @@ import { revalidatePath } from 'next/cache';
 
 export async function deletePdf(fileName: string) {
   if (!adminStorage) {
-    return { error: 'Firebase Admin Storage is not initialized.' };
+    const errorMessage = 'Firebase Admin Storage is not initialized.';
+    console.error(errorMessage);
+    return { success: false, error: errorMessage };
   }
-
-  if (!fileName) {
-    return { error: 'File name not provided.' };
-  }
+  const bucket = adminStorage.bucket();
+  const file = bucket.file(`uploads/${fileName}`);
 
   try {
-    console.log(`Attempting to delete file: ${fileName}`);
-    await adminStorage.file(fileName).delete();
-    console.log(`Successfully deleted file: ${fileName}`);
-    
+    await file.delete();
     revalidatePath('/admin/pdfs');
-    
-    return { success: `Successfully deleted ${fileName}` };
-  } catch (err: any) {
-    console.error(`Failed to delete file ${fileName}:`, err);
-    return { error: `Failed to delete file: ${err.message}` };
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting file:', error);
+    return { success: false, error: error.message };
   }
 }
 
-export async function getDownloadUrl(fileName: string) {
-  if (!adminStorage) {
-    return { error: 'Firebase Admin Storage is not initialized.' };
-  }
-
-  if (!fileName) {
-    return { error: 'File name not provided.' };
-  }
-
-  try {
-    const [url] = await adminStorage.file(fileName).getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 1000 * 60 * 5, // 5 minutes
+export async function getDownloadUrl(fullPath: string): Promise<string> {
+    if (!adminStorage) {
+        throw new Error('Firebase Admin Storage is not initialized.');
+    }
+    const bucket = adminStorage.bucket();
+    const file = bucket.file(fullPath);
+    const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491' // A long time in the future.
     });
-    return { url };
-  } catch (err: any) {
-    console.error(`Failed to get download URL for ${fileName}:`, err);
-    return { error: `Failed to get download URL: ${err.message}` };
-  }
+    return url;
 }

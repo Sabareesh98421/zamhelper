@@ -1,26 +1,37 @@
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK.
-if (!admin.apps.length) {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
+function initializeFirebaseAdmin() {
+    if (admin.apps.length > 0) {
+        return admin.app();
+    }
 
-  // Use the private storage bucket environment variable, but fall back to the project ID
-  // to ensure the application builds successfully in all environments.
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${projectId}.firebasestorage.app`;
+    const serviceAccount = {
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY,
+    };
 
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: projectId,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-    storageBucket: storageBucket,
-  });
+    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+        console.warn('Firebase admin credentials are not set. Skipping initialization.');
+        return null;
+    }
 
-  console.log('Firebase Admin SDK initialized successfully.');
+    try {
+        return admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: serviceAccount.projectId,
+                clientEmail: serviceAccount.clientEmail,
+                privateKey: serviceAccount.privateKey.replace(/\\n/g, '\n'),
+            }),
+            storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        });
+    } catch (error) {
+        console.error('Firebase admin initialization error', error);
+        return null;
+    }
 }
 
-const adminDB = admin.firestore();
-const adminStorage = admin.storage().bucket();
+const app = initializeFirebaseAdmin();
+const adminStorage = app ? admin.storage() : null;
 
-export { admin, adminDB, adminStorage };
+export { adminStorage };

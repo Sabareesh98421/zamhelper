@@ -1,72 +1,63 @@
 
-"use server";
+'use server';
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminStorage } from "@/app/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 
 export async function uploadPdf(formData: FormData) {
-    console.log("[Server Action: uploadPdf] Received request for sanitization and storage.");
-    
-    // The adminStorage object from firebase-admin is already the bucket
     if (!adminStorage) {
-        console.error("[Server Action: uploadPdf] Firebase Admin SDK not initialized. Storage is unavailable.");
-        return { success: false, message: "Storage service is not configured. Please contact support." };
+        throw new Error('Firebase Admin Storage is not initialized.');
     }
 
     const supabase = await createSupabaseServerClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-
-    if (!user) {
-        console.error("[Server Action: uploadPdf] No user session found.");
-        return { success: false, message: "Not authorized" };
+    if (authError || !user) {
+        return { success: false, error: 'Authentication failed.' };
     }
 
-    const file = formData.get("file") as File;
-
-    if (!file || typeof file.arrayBuffer !== 'function' || file.type !== 'application/pdf') {
-        return { success: false, message: "Invalid file. Please upload a PDF." };
+    const file = formData.get('file') as File;
+    if (!file) {
+        return { success: false, error: 'No file provided.' };
     }
 
     const fileName = `${uuidv4()}-${file.name}`;
-    const storagePath = `uploads/${user.id}/${fileName}`;
+    const bucket = adminStorage.bucket();
 
     try {
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-        
-        // adminStorage is the bucket, so we can call .file() directly
-        await adminStorage.file(storagePath).save(fileBuffer, {
-            metadata: { contentType: file.type },
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const remoteFile = bucket.file(`uploads/${fileName}`);
+        await remoteFile.save(buffer, {
+            metadata: {
+                contentType: file.type,
+                metadata: {
+                    firebaseStorageDownloadTokens: uuidv4(),
+                },
+            },
         });
 
-        const { data: uploadData, error: uploadError } = await supabase
-            .from("uploads")
-            .insert({ 
-                file_name: file.name, 
-                storage_path: storagePath, 
-                status: "uploaded",
-                user_id: user.id 
-            })
-            .select("id")
-            .single();
+        const [url] = await remoteFile.getSignedUrl({
+            action: 'read',
+            expires: '03-09-2491'
+        });
 
-        if (uploadError) {
-            console.error("[Server Action] Supabase insert error:", uploadError);
-            // If DB insert fails, delete the file from storage to prevent orphans
-            await adminStorage.file(storagePath).delete();
-            return { success: false, message: "Could not save file metadata." };
+        const { data: pdfData, error: dbError } = await supabase.from('pdfs').insert({
+            file_name: fileName,
+            storage_path: remoteFile.name,
+            status: 'uploaded',
+            user_id: user.id,
+            download_url: url
+        }).select('id').single();
+
+        if (dbError) {
+            throw new Error(`Database error: ${dbError.message}`);
         }
 
-        console.log(`[Server Action: uploadPdf] File sanitized and stored. Upload ID: ${uploadData.id}`);
-        return { success: true, uploadId: uploadData.id };
+        return { success: true, uploadId: pdfData.id, fileName };
 
-    } catch (err: any) {
-        console.error("[Server Action] An unexpected error occurred during upload:", err);
-        return {
-            success: false,
-            message: `Failed to upload: ${err.message || "An unknown error occurred."}`,
-        };
+    } catch (error: any) {
+        console.error('Error uploading file:', error);
+        return { success: false, error: error.message };
     }
 }
