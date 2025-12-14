@@ -11,8 +11,14 @@ function initializeFirebaseAdmin() {
         privateKey: process.env.FIREBASE_PRIVATE_KEY,
     };
 
-    if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        console.warn('Firebase admin credentials are not set. Skipping initialization.');
+    // verbose logging for debugging
+    const missingKeys = [];
+    if (!serviceAccount.projectId) missingKeys.push('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
+    if (!serviceAccount.clientEmail) missingKeys.push('FIREBASE_CLIENT_EMAIL');
+    if (!serviceAccount.privateKey) missingKeys.push('FIREBASE_PRIVATE_KEY');
+
+    if (missingKeys.length > 0) {
+        console.error(`Firebase admin credentials are not completely set. Missing: ${missingKeys.join(', ')}. Skipping initialization.`);
         return null;
     }
 
@@ -21,7 +27,7 @@ function initializeFirebaseAdmin() {
             credential: admin.credential.cert({
                 projectId: serviceAccount.projectId,
                 clientEmail: serviceAccount.clientEmail,
-                privateKey: serviceAccount.privateKey.replace(/\\n/g, '\n'),
+                privateKey: serviceAccount.privateKey ? serviceAccount.privateKey.replace(/\\n/g, '\n') : '',
             }),
             storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
         });
