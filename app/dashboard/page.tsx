@@ -1,69 +1,126 @@
-"use client";
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import type { Exam } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import React from 'react';
+import { UsersIcon, DocumentDuplicateIcon, CheckBadgeIcon } from '@heroicons/react/24/outline';
+import { createClient } from '@supabase/supabase-js';
+import { adminStorage } from '@/app/lib/firebase-admin';
+import { format, formatDistanceToNow } from 'date-fns';
 
-export default function DashboardPage() {
-    const [exams, setExams] = useState<Exam[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const supabase = createClient();
-    const router = useRouter();
+export const dynamic = 'force-dynamic';
 
-    useEffect(() => {
-        const fetchExams = async () => {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('exams')
-                .select('id, title, created_at');
+const AdminDashboardPage = async () => {
+  const stats = [
+    { name: 'Total Users', stat: '0', icon: UsersIcon },
+    { name: 'Total PDFs Uploaded', stat: '0', icon: DocumentDuplicateIcon },
+    { name: 'Total Exam Attempts', stat: '0', icon: CheckBadgeIcon },
+  ];
+  let recentAttempts: any[] = [];
+  let error: string | null = null;
 
-            if (error) {
-                setError(error.message);
-            } else if (data) {
-                setExams(data);
-            }
-            setLoading(false);
-        };
-
-        fetchExams();
-    }, [supabase]);
-
-    const handleStartExam = (examId: number) => {
-        router.push(`/exam/${examId}`);
-    };
-
-    if (loading) {
-        return <div className="text-center p-8">Loading exams...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center p-8 text-red-500">Error: {error}</div>;
-    }
-
-    return (
-        <div className="max-w-4xl mx-auto my-10 p-6">
-            <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-white">Available Exams</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {exams.map(exam => (
-                    <div key={exam.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
-                        <div className="p-6">
-                            <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2 truncate">{exam.title}</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Created on: {new Date(exam.created_at).toLocaleDateString()}</p>
-                            <button 
-                                onClick={() => handleStartExam(exam.id)}
-                                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75"
-                            >
-                                Start Exam
-                            </button>
-                        </div>
-                    </div>
-                ))}
-                 {exams.length === 0 && (
-                    <p className="text-center text-gray-500 dark:text-gray-400 col-span-full">No exams available at the moment. Please check back later.</p>
-                )}
-            </div>
-        </div>
+  try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!
     );
-}
+
+    const [userCountResult, attemptCountResult, pdfCountResult, recentAttemptsResult] = await Promise.all([
+      supabaseAdmin.from('users').select('id', { count: 'exact' }),
+      supabaseAdmin.from('attempts').select('id', { count: 'exact' }),
+      adminStorage ? adminStorage.bucket().getFiles() : Promise.resolve([[]]),
+      supabaseAdmin
+        .from('attempts')
+        .select(`
+          id,
+          score,
+          start_time, // Corrected column name
+          users ( email ),
+          exams ( title )
+        `)
+        .order('start_time', { ascending: false }) // Corrected column name
+        .limit(5)
+    ]);
+
+    stats[0].stat = userCountResult.count?.toLocaleString() || '0';
+    stats[2].stat = attemptCountResult.count?.toLocaleString() || '0';
+    stats[1].stat = pdfCountResult[0].length.toLocaleString() || '0';
+    
+    if (recentAttemptsResult.data) {
+      recentAttempts = recentAttemptsResult.data;
+    }
+
+    if (userCountResult.error || attemptCountResult.error || recentAttemptsResult.error) {
+      throw new Error('Failed to fetch data from Supabase.');
+    }
+
+  } catch (err: any) {
+    console.error("Error fetching dashboard data:", err);
+    error = `Failed to load dashboard: ${err.message}`;
+  }
+
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h1>
+      
+      {error && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+          <p className="font-bold">Error</p>
+          <p>{error}</p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {stats.map((item) => (
+          <div key={item.name} className="bg-white dark:bg-gray-800 overflow-hidden shadow-lg rounded-lg p-5 transition-transform transform hover:-translate-y-1">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <item.icon className="h-8 w-8 text-indigo-500" aria-hidden="true" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{item.name}</dt>
+                  <dd className="text-2xl font-semibold text-gray-900 dark:text-white">{item.stat}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white px-6 pt-6">Recent Exam Attempts</h2>
+        <div className="flow-root mt-4">
+          <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
+            {recentAttempts.length > 0 ? recentAttempts.map((attempt) => (
+              <li key={attempt.id} className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0">
+                    <CheckBadgeIcon className="h-8 w-8 text-green-500" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {attempt.users?.email || 'Unknown User'}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Completed <span className="font-medium">{attempt.exams?.title || 'Unknown Exam'}</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${attempt.score >= 70 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {attempt.score}%
+                    </p>
+                     <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatDistanceToNow(new Date(attempt.start_time), { addSuffix: true })}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            )) : (
+              <p className="px-6 pb-6 text-gray-500 dark:text-gray-400">No recent activity found.</p>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboardPage;

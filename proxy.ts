@@ -54,7 +54,18 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const path = request.nextUrl.pathname;
+  const isProtectedRoute =
+    path.startsWith('/dashboard') ||
+    path.startsWith('/upload') ||
+    path.startsWith('/manage-pdfs') ||
+    path.startsWith('/all-attempts');
+
+  if (!user && isProtectedRoute) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
 
   return response
 }

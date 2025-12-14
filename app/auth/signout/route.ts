@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { type NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
 
   // Check if we have a session
@@ -11,10 +11,9 @@ export async function POST(req: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  // The NEXT_PUBLIC_BASE_URL is set in apphosting.yaml to the public URL of the app.
-  // Using it here ensures that after sign-out, the user is redirected to the
-  // correct homepage, avoiding the internal 0.0.0.0 address.
-  return NextResponse.redirect(process.env.NEXT_PUBLIC_BASE_URL!, {
+  // Redirect to the current origin (protocol + host)
+  // This automatically handles localhost vs production without needing configuration
+  return NextResponse.redirect(request.nextUrl.origin, {
     status: 302,
   });
 }

@@ -41,13 +41,21 @@ export default function Nav() {
           <Link href="/exam" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4">
             Exams
           </Link>
-          <Link href="/upload" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4">
-            Upload
-          </Link>
           {user && (
-            <Link href="/admin/dashboard" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white">
-              Admin
-            </Link>
+            <>
+              <Link href="/upload" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4">
+                Upload
+              </Link>
+              <Link href="/dashboard" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4">
+                Dashboard
+              </Link>
+              <Link href="/manage-pdfs" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white mr-4">
+                PDFs
+              </Link>
+              <Link href="/all-attempts" className="block mt-4 lg:inline-block lg:mt-0 text-teal-200 hover:text-white">
+                Attempts
+              </Link>
+            </>
           )}
         </div>
         <div>

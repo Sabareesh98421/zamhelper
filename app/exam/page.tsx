@@ -1,76 +1,80 @@
-
 import React from 'react';
 import Link from 'next/link';
-import { createClient } from '@/app/lib/supabase/server';
-import { Exam } from '@/app/lib/types';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { DocumentTextIcon } from '@heroicons/react/24/outline'; // Assuming you have heroicons
 
 export const dynamic = 'force-dynamic';
 
-async function getExams(): Promise<Exam[]> {
-  const supabase = await createClient();
-  const { data: exams, error } = await supabase
-    .from('exams')
-    .select('id, title');
+async function getPdfExams() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  // Fetch only processed files (assuming processed means uploaded?)
+  // Actually, we can fetch all.
+  const { data, error } = await supabase
+    .from('pdf_uploads')
+    .select('id, file_name, storage_path, uploaded_at')
+    .order('uploaded_at', { ascending: false });
 
   if (error) {
-    // Log the detailed error for debugging
-    console.error('Error fetching exams from Supabase:', error);
-    // Throw a more informative error message
-    throw new Error(`Failed to fetch exams. Supabase error: ${JSON.stringify(error, null, 2)}`);
+    console.error('Error fetching PDF exams:', error);
+    return [];
   }
 
-  return exams as Exam[];
+  return data;
 }
 
 const ExamPage = async () => {
-  let exams: Exam[] = [];
-  let errorMessage: string | null = null;
-  try {
-    exams = await getExams();
-  } catch (e) {
-    // Log the error and prepare a message for the UI
-    if (e instanceof Error) {
-      errorMessage = e.message;
-    } else {
-      errorMessage = 'An unknown error occurred.';
-    }
-    console.error('Error in ExamPage:', e);
-  }
+  const exams = await getPdfExams();
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold">Exams</h1>
-        <div className="flex gap-4">
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Random PDF
-          </button>
-          <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            Random Content
-          </button>
-        </div>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Available Exams</h1>
+        <Link href="/upload" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors">
+          Upload New PDF
+        </Link>
       </div>
-      {errorMessage && (
-        <div className="text-center py-16 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Error:</strong>
-          <span className="block sm:inline"> Could not load exams. Please check your connection and environment variables.</span>
-          <pre className="text-sm mt-2 whitespace-pre-wrap">{errorMessage}</pre>
-        </div>
-      )}
-      {!errorMessage && exams.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {exams.map((exam) => (
-            <Link key={exam.id} href={`/exam/${exam.id}`}>
-              <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-                {/* This is the corrected line */}
-                <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{exam.title}</h5>
+
+      {exams.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {exams.map((exam: any) => (
+            <Link key={exam.id} href={`/exam/${exam.id}?path=${encodeURIComponent(exam.storage_path)}`}>
+              <div className="block p-6 bg-white border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-shadow dark:bg-gray-800 dark:border-gray-700">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-indigo-100 text-indigo-600 rounded-full dark:bg-indigo-900 dark:text-indigo-300">
+                    <DocumentTextIcon className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <h5 className="mb-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate" title={exam.file_name}>
+                      {exam.file_name}
+                    </h5>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(exam.uploaded_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <span className="inline-flex items-center px-3 py-1 text-sm font-medium text-indigo-800 bg-indigo-100 rounded-full dark:bg-indigo-900 dark:text-indigo-200">
+                    Start Exam &rarr;
+                  </span>
+                </div>
               </div>
             </Link>
           ))}
         </div>
-      ) : !errorMessage && (
-        <div className="text-center py-16">
-          <p className="text-xl text-gray-500">No exams found. <Link href="/upload" className="text-blue-500 hover:underline">Upload a PDF</Link> to get started.</p>
+      ) : (
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+          <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No exams available</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Upload a PDF to generate an exam.</p>
+          <div className="mt-6">
+            <Link href="/upload" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              Upload PDF
+            </Link>
+          </div>
         </div>
       )}
     </div>

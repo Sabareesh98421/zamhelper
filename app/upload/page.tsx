@@ -44,7 +44,7 @@ export default function UploadPage() {
             if (result.success && result.uploadId) {
                 console.log(`[Client] Upload successful. Navigating to review page for ID: ${result.uploadId}`);
                 addMessage("Exam created successfully!", "success");
-                router.push(`/admin/uploads/${result.uploadId}/review`);
+                router.push(`/admin/myuploads/${result.uploadId}/review`);
             } else {
                 console.error("[Client] Upload failed:", result.error);
                 addMessage(result.error || "Upload failed. Please try again.", "error");
@@ -66,7 +66,7 @@ export default function UploadPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
-                 <div className="flex items-center justify-center w-full">
+                <div className="flex items-center justify-center w-full">
                     <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <ArrowUpTrayIcon className="w-10 h-10 mb-3 text-gray-400" />

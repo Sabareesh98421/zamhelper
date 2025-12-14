@@ -1,62 +1,80 @@
 
 import React from 'react';
-import { getOrCreateQuestions } from './actions';
-import { supabase } from '@/app/lib/supabase'; // Import supabase client
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createExamFromPdf } from '@/app/exam/actions';
+import ExamTaker from './ExamTaker';
+import Link from 'next/link';
 
-// This is a server component, so we can fetch data directly.
-const ExamQuestionPage = async ({ params }: { params: { id: string } }) => {
-  
-  // Fetch the exam details to get the name
-  const { data: examData, error: examError } = await supabase
-    .from('exams') // Corrected table name
-    .select('title') // Corrected column name
-    .eq('id', params.id)
+// Helper to get PDF path from DB if not in query params (robustness)
+async function getPdfPath(id: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('pdf_uploads')
+    .select('storage_path, file_name')
+    .eq('id', id)
     .single();
 
-  if (examError || !examData) {
-    console.error('Error fetching exam details:', examError);
-    // Render a fallback or error page if the exam isn't found
+  if (error || !data) return null;
+  return data;
+}
+
+export default async function ExamIdPage({ params, searchParams }: { params: { id: string }, searchParams: { path?: string } }) {
+  const { id } = await params;
+  const { path } = await searchParams; // Next.js 15+ searchParams is async? Only params. Wait, check Next 16. In 15+ both are promises.
+  // In strict Next 15+, await params. In 14 no. User said Next 16.0.10.
+  // I will await them to be safe.
+
+  let storagePath = path;
+  let fileName = "Exam";
+
+  if (!storagePath) {
+    const fileData = await getPdfPath(id);
+    if (fileData) {
+      storagePath = fileData.storage_path;
+      fileName = fileData.file_name;
+    }
+  } else {
+    // Fetch filename mostly for display? Or trust it provided.
+    // We can just use "Exam" or fetch DB anyway if we want title.
+    const fileData = await getPdfPath(id);
+    if (fileData) fileName = fileData.file_name;
+  }
+
+  if (!storagePath) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold mb-4">Exam Not Found</h1>
-        <p>We couldn't find the exam you were looking for.</p>
+      <div className="p-12 text-center">
+        <h1 className="text-2xl font-bold text-red-600">Error</h1>
+        <p className="mt-2 text-gray-600">Could not find the associated PDF file.</p>
+        <Link href="/exam" className="mt-4 inline-block text-indigo-600 underline">Back to Exams</Link>
       </div>
     );
   }
 
-  // Fetch the questions for the exam
-  const questions = await getOrCreateQuestions(params.id);
+  // Call Server Action to parse PDF
+  const result = await createExamFromPdf(storagePath);
+
+  if (!result.success || !result.questions) {
+    return (
+      <div className="p-12 text-center">
+        <h1 className="text-2xl font-bold text-red-600">Parsing Failed</h1>
+        <p className="mt-2 text-gray-600">{result.error}</p>
+        <div className="mt-4 p-4 bg-yellow-50 text-left text-sm text-yellow-800 rounded mx-auto max-w-lg">
+          <strong>Tip:</strong> Ensure your PDF has selectable text (not scanned images) and follows a format like:
+          <pre className="mt-2 bg-white p-2 border rounded">
+            1. Question Text...
+            A. Option 1
+            B. Option 2
+            Answer: B
+          </pre>
+        </div>
+        <Link href="/exam" className="mt-4 inline-block text-indigo-600 underline">Back to Exams</Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Display the actual exam name */}
-      <h1 className="text-4xl font-bold mb-4">Exam: {examData.title}</h1>
-      
-      <form>
-        {questions.map((q, index) => (
-          <div key={q.id} className="mb-8 p-4 border rounded-lg shadow-sm">
-            <p className="text-xl font-semibold mb-2">{index + 1}. {q.question}</p>
-            {/* Ensure options are displayed correctly */}
-            <div className="flex flex-col gap-2">
-              {Array.isArray(q.options) && q.options.length > 0 ? (
-                q.options.map((option, i) => (
-                  <label key={i} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100">
-                    <input type="radio" name={`question-${q.id}`} value={option} className="form-radio h-5 w-5 text-blue-600" />
-                    <span>{option}</span>
-                  </label>
-                ))
-              ) : (
-                <p className="text-gray-500">No options available for this question.</p>
-              )}
-            </div>
-          </div>
-        ))}
-        <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg">
-          Submit Answers
-        </button>
-      </form>
+    <div>
+      <ExamTaker questions={result.questions} examTitle={fileName} />
     </div>
   );
-};
-
-export default ExamQuestionPage;
+}

@@ -23,7 +23,7 @@ export default function Home() {
       const { data: examsData, error } = await supabase
         .from('pdf_uploads')
         .select('id, file_name')
-        .order('created_at', { ascending: false });
+        .order('uploaded_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching exams:', error);
