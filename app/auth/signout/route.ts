@@ -11,9 +11,9 @@ export async function POST(request: NextRequest) {
     await supabase.auth.signOut();
   }
 
-  // Redirect to the current origin (protocol + host)
-  // This automatically handles localhost vs production without needing configuration
-  return NextResponse.redirect(request.nextUrl.origin, {
+  // Redirect to the application URL (env var) or fallback to origin
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+  return NextResponse.redirect(appUrl, {
     status: 302,
   });
 }
