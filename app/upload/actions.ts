@@ -67,8 +67,9 @@ export async function uploadPdf(formData: FormData) {
     try {
         console.log("[Upload Debug] processing file buffer...");
         const buffer = Buffer.from(await file.arrayBuffer());
-        const remoteFile = bucket.file(`uploads/${fileName}`);
-        console.log(`[Upload Debug] Attempting to upload to path: uploads/${fileName}`);
+        const userFolder = `${user.id}_${user.email}`;
+        const remoteFile = bucket.file(`uploads/${userFolder}/${fileName}`);
+        console.log(`[Upload Debug] Attempting to upload to path: uploads/${userFolder}/${fileName}`);
 
         await remoteFile.save(buffer, {
             metadata: {
