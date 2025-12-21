@@ -25,7 +25,7 @@ export async function uploadPdf(formData: FormData) {
     console.log("[Upload Debug] Checking profile for user:", user.id);
 
     // --- Self-Healing: Ensure Profile Exists ---
-    // Check if the profile exists to avoid foreign key constraint violation
+    // Check if the profile exists
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
@@ -33,12 +33,14 @@ export async function uploadPdf(formData: FormData) {
         .single();
 
     if (profileError && profileError.code === 'PGRST116') {
-        // Profile missing (PGRST116 is "Row not found"), let's create it
-        console.warn(`[Server] Profile missing for user ${user.id}. creating it now...`);
+        // Profile missing, attempt to create it using the standard client.
+        // This requires the RLS policy to allow INSERT for authenticated users.
+        console.warn(`[Server] Profile missing for user ${user.id}. Attempting to create...`);
+
         const { error: insertError } = await supabase.from('profiles').insert({
             id: user.id,
             email: user.email!,
-            role: 'student' // Default role
+            role: 'admin' // User stated "each user is admin"
         });
 
         if (insertError) {
@@ -49,7 +51,6 @@ export async function uploadPdf(formData: FormData) {
     } else if (profileError) {
         // Some other unexpected error
         console.error("[Server] Error checking profile:", profileError);
-        // We continue, hoping it might just be a permissions issue that doesn't block the FK (unlikely but safe fallback)
     }
     // -------------------------------------------
 
