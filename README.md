@@ -1,40 +1,71 @@
 # ZamHelper
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**ZamHelper** is an advanced exam preparation tool designed to convert static PDF question papers into interactive, online exams. It streamlines the study process for students by automatically parsing uploaded documents and generating trackable practice sessions.
 
 Your application is hosted at: [https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app](https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app)
 
-## Getting Started
+## 🚀 Key Features
 
-First, run the development server:
+*   **PDF to Exam Conversion:** Upload PDF question papers and automatically extract questions.
+*   **Interactive Practice:** Take exams in a real-time environment with immediate feedback.
+*   **Progress Tracking:** (Planned) Track attempts and scores over time.
+*   **Secure Authentication:** Google OAuth integration via Supabase.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠 Tech Stack
+
+*   **Framework:** [Next.js 14+](https://nextjs.org) (App Router)
+*   **Database & Auth:** [Supabase](https://supabase.com) (PostgreSQL, GoTrue)
+*   **Storage & Hosting:** [Firebase](https://firebase.google.com) (Cloud Storage, App Hosting)
+*   **Styling:** Tailwind CSS
+*   **Language:** TypeScript
+
+## ⚙️ Configuration & Environment
+
+To run this project correctly, you must configure the following environment variables.
+
+### Critical: Dynamic URL Handling
+We have implemented **environment-agnostic redirection** to solve issues with `0.0.0.0` or `localhost` redirects in containerized environments.
+
+*   `NEXT_PUBLIC_APP_URL`: **REQUIRED**. This variable dictates the base URL for authentication callbacks and middleware redirects.
+    *   **Local Development:** `http://localhost:3000`
+    *   **Production:** `https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app`
+
+### Other Variables
+*   `NEXT_PUBLIC_SUPABASE_URL`
+*   `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+*   `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+*   `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+
+## 📝 Recent Development Updates
+
+### 1. Dynamic URL Refactoring (Dec 2025)
+**Problem:** The application was hardcoding URLs, causing authentication redirects to fail (sending users to `0.0.0.0`) in the hosted container environment.
+**Solution:**
+*   Refactored `proxy.ts`, `app/auth/actions.ts`, and `app/auth/signout/route.ts` to use `NEXT_PUBLIC_APP_URL`.
+*   Implemented a fallback mechanism: `process.env.NEXT_PUBLIC_APP_URL` ?? `request.nextUrl.origin`.
+*   Updated `proxy.ts` middleware to parse the hostname dynamically, making the code valid for both `localhost` and `hosted.app` domains without code changes.
+
+### 2. Upload Debugging
+**Problem:** File uploads were failing silently in production.
+**Solution:**
+*   Added verbose logging to `app/upload/actions.ts` prefixed with `[Upload Debug]`.
+*   These logs trace the entire upload lifecycle: Admin Storage Initialization -> User Auth -> Profile Check -> File Buffer Processing -> Database Insert.
+
+## 📦 Getting Started
+
+1.  **Clone the repository**
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Set up `.env.local`:**
+    ```bash
+    NEXT_PUBLIC_APP_URL=http://localhost:3000
+    # Add Supabase and Firebase keys...
+    ```
+4.  **Run the development server:**
+    ```bash
+    npm run dev
+    ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
