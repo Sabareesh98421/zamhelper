@@ -8,6 +8,12 @@ const nextConfig = {
         port: "",
         pathname: "/a/**",
       },
+      {
+        protocol: "https",
+        hostname: "zamhelper--zamhelper-240302.asia-southeast1.hosted.app",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   async rewrites() {

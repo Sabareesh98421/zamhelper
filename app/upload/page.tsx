@@ -1,6 +1,4 @@
-
 "use client";
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSnackbar } from '@/hooks/useSnackbar';
@@ -44,7 +42,9 @@ export default function UploadPage() {
             if (result.success && result.uploadId) {
                 console.log(`[Client] Upload successful. Navigating to review page for ID: ${result.uploadId}`);
                 addMessage("Exam created successfully!", "success");
-                router.push(`/admin/myuploads/${result.uploadId}/review`);
+                setTimeout(() => {
+                    router.push(`/admin/myuploads/${result.uploadId}/review`);
+                }, 1000)
             } else {
                 console.error("[Client] Upload failed:", result.error);
                 addMessage(result.error || "Upload failed. Please try again.", "error");

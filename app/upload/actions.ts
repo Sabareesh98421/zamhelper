@@ -6,18 +6,23 @@ import { adminStorage } from "@/app/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 
 export async function uploadPdf(formData: FormData) {
+    console.log("[Upload Debug] Starting uploadPdf action");
     if (!adminStorage) {
         const errorMessage = 'Firebase Admin Storage is not initialized.';
-        console.error("Firebase Admin Error:", errorMessage);
+        console.error("[Upload Debug] Firebase Admin Error:", errorMessage);
         return { success: false, error: errorMessage };
     }
+    console.log("[Upload Debug] Firebase Admin Storage is initialized");
 
     const supabase = await createSupabaseServerClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log("[Upload Debug] User auth check completed. User ID:", user?.id);
 
     if (authError || !user) {
+        console.error("[Upload Debug] Authentication failed:", authError);
         return { success: false, error: 'Authentication failed.' };
     }
+    console.log("[Upload Debug] Checking profile for user:", user.id);
 
     // --- Self-Healing: Ensure Profile Exists ---
     // Check if the profile exists to avoid foreign key constraint violation
@@ -50,15 +55,20 @@ export async function uploadPdf(formData: FormData) {
 
     const file = formData.get('file') as File;
     if (!file) {
+        console.error("[Upload Debug] No file provided in form data");
         return { success: false, error: 'No file provided.' };
     }
+    console.log(`[Upload Debug] File received: ${file.name}, Size: ${file.size}, Type: ${file.type}`);
 
     const fileName = `${uuidv4()}-${file.name}`;
     const bucket = adminStorage.bucket();
 
     try {
+        console.log("[Upload Debug] processing file buffer...");
         const buffer = Buffer.from(await file.arrayBuffer());
         const remoteFile = bucket.file(`uploads/${fileName}`);
+        console.log(`[Upload Debug] Attempting to upload to path: uploads/${fileName}`);
+
         await remoteFile.save(buffer, {
             metadata: {
                 contentType: file.type,
@@ -67,8 +77,10 @@ export async function uploadPdf(formData: FormData) {
                 },
             },
         });
+        console.log("[Upload Debug] Firebase storage upload successful");
 
         // 1. Insert into pdf_uploads (Correct table name and status)
+        console.log("[Upload Debug] Inserting record into pdf_uploads table...");
         const { data: pdfData, error: dbError } = await supabase.from('pdf_uploads').insert({
             file_name: fileName,
             storage_path: remoteFile.name,
@@ -77,6 +89,7 @@ export async function uploadPdf(formData: FormData) {
         }).select('id').single();
 
         if (dbError) {
+            console.error("[Upload Debug] Database error (pdf_uploads):", dbError);
             throw new Error(`Database error (pdf_uploads): ${dbError.message}`);
         }
 
@@ -143,7 +156,7 @@ export async function uploadPdf(formData: FormData) {
         return { success: true, uploadId: uploadId, fileName };
 
     } catch (error: any) {
-        console.error('Error uploading file:', error);
+        console.error('[Upload Debug] Error uploading file:', error);
         return { success: false, error: error.message };
     }
 }

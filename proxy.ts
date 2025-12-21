@@ -56,6 +56,27 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
+  // 2. Domain Redirection Logic
+  const host = request.headers.get('host') || ''
+
+  // Define whitelisted emails for firebaseapp.com access
+  // REPLACE THESE WITH REAL EMAILS
+  const WHITELISTED_EMAILS = ['admin@example.com', 'tester@example.com']
+
+  if (host.includes('firebaseapp.com')) {
+    const isWhitelisted = user?.email && WHITELISTED_EMAILS.includes(user.email)
+
+    if (!isWhitelisted) {
+      // Redirect to the .web.app domain
+      // We keep the pathname and search params
+      const url = request.nextUrl.clone()
+      url.hostname = 'zamhelper-240302.web.app'
+      url.port = '' // Ensure port is cleared for production
+      url.protocol = 'https'
+      return NextResponse.redirect(url)
+    }
+  }
+
   const path = request.nextUrl.pathname;
   const isProtectedRoute =
     path.startsWith('/dashboard') ||
