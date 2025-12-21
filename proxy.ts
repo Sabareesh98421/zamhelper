@@ -67,13 +67,25 @@ export async function proxy(request: NextRequest) {
     const isWhitelisted = user?.email && WHITELISTED_EMAILS.includes(user.email)
 
     if (!isWhitelisted) {
-      // Redirect to the .web.app domain
+      // Redirect to the configured application URL
       // We keep the pathname and search params
-      const url = request.nextUrl.clone()
-      url.hostname = 'zamhelper-240302.web.app'
-      url.port = '' // Ensure port is cleared for production
-      url.protocol = 'https'
-      return NextResponse.redirect(url)
+      const appUrlEnv = process.env.NEXT_PUBLIC_APP_URL;
+      if (appUrlEnv) {
+        try {
+          const targetUrl = new URL(appUrlEnv);
+          const url = request.nextUrl.clone();
+          url.hostname = targetUrl.hostname;
+          url.protocol = targetUrl.protocol;
+          url.port = targetUrl.port; // In proper production this is usually empty or 443 implies https
+
+          // Only redirect if we are not already on the correct hostname to avoid loops
+          if (host !== targetUrl.host) {
+            return NextResponse.redirect(url);
+          }
+        } catch (e) {
+          console.error('Failed to parse NEXT_PUBLIC_APP_URL', e);
+        }
+      }
     }
   }
 

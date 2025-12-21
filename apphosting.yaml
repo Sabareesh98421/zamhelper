@@ -31,3 +31,7 @@ env:
     secret: FIREBASE_PRIVATE_KEY
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
     secret: FIREBASE_STORAGE_BUCKET
+
+  # Application URL
+  - variable: NEXT_PUBLIC_APP_URL
+    value: https://zamhelper--zamhelper-240302.asia-southeast1.hosted.app
