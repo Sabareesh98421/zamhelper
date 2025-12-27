@@ -1,6 +1,4 @@
-import { PDFParse } from 'pdf-parse';
-// Remove type mismatch warning (v1 types vs v2 lib) by ignoring or relying on bundled types if they work.
-// Since @types/pdf-parse is installed, it might conflict. We'll use the class.
+
 
 export interface Question {
     id: number;
@@ -44,9 +42,11 @@ const STRATEGIES = [
 
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
     try {
-        // @ts-ignore - types mismatch between @types/pdf-parse (v1) and pdf-parse (v2)
-        const parser = new PDFParse({ data: buffer });
-        const data = await parser.getText();
+        // Use dynamic import to prevent build-time evaluation issues with DOMMatrix
+        const pdfModule = await import('pdf-parse');
+        // @ts-ignore
+        const pdf = pdfModule.default || pdfModule;
+        const data = await pdf(buffer);
         return data.text;
     } catch (error) {
         console.error("PDF Parse Error:", error);
