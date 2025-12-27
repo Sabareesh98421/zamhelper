@@ -61,7 +61,7 @@ export async function uploadPdf(formData: FormData) {
     }
     console.log(`[Upload Debug] File received: ${file.name}, Size: ${file.size}, Type: ${file.type}`);
 
-    const fileName = `${uuidv4()}-${file.name}`;
+    const fileName = `${file.name}-${uuidv4()}`;
     const bucket = adminStorage.bucket();
 
     try {
