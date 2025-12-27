@@ -8,7 +8,7 @@ interface PdfFile {
     id: string;
     file_name: string;
     path: string; // Renamed from storage_path
-    uploaded_at: string;
+    created_at: string;
 }
 
 interface PdfListProps {
@@ -103,7 +103,7 @@ export default function PdfList({ files }: PdfListProps) {
                                         {displayName}
                                     </h5>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        {new Date(file.uploaded_at).toLocaleDateString()}
+                                        {new Date(file.created_at).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>

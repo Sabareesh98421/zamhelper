@@ -31,7 +31,7 @@ async function getPdfExams() {
   const formattedData = data?.map(item => ({
     ...item,
     path: item.storage_path, // Map storage_path to path
-    uploaded_at: item.created_at // Map created_at to uploaded_at for the component
+    created_at: item.created_at // Map created_at to created_at
   })) || [];
 
   console.log('[ExamPage] Fetched exams:', formattedData.length);
