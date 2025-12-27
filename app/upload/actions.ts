@@ -61,7 +61,10 @@ export async function uploadPdf(formData: FormData) {
     }
     console.log(`[Upload Debug] File received: ${file.name}, Size: ${file.size}, Type: ${file.type}`);
 
-    const fileName = `${file.name}-${uuidv4()}`;
+    // Sanitize filename: replace hyphens with underscores to avoid confusion, though our regex will handle it.
+    // Also user requested this specific change.
+    const sanitizedOriginalName = file.name.replace(/-/g, '_');
+    const fileName = `${sanitizedOriginalName}-${uuidv4()}`;
     const bucket = adminStorage.bucket();
 
     try {
