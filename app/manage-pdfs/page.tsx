@@ -28,9 +28,9 @@ const ManagePdfsPage = async () => {
     try {
         const { data: uploads, error: dbError } = await supabase
             .from('pdf_uploads')
-            .select('id, file_name, storage_path, uploaded_at')
+            .select('id, file_name, storage_path, created_at')
             .eq('uploaded_by', user.id)
-            .order('uploaded_at', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (dbError) {
             console.error("Error fetching files from Database:", dbError);
@@ -40,7 +40,7 @@ const ManagePdfsPage = async () => {
                 name: upload.file_name,
                 path: upload.storage_path,
                 // size: 0, // Not available in DB yet
-                createdAt: upload.uploaded_at,
+                createdAt: upload.created_at,
             }));
         }
 
