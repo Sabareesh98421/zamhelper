@@ -43,8 +43,8 @@ export default function UploadPage() {
                 console.log(`[Client] Upload successful. Navigating to review page for ID: ${result.uploadId}`);
                 addMessage("Exam created successfully!", "success");
                 setTimeout(() => {
-                    router.push(`/admin/myuploads/${result.uploadId}/review`);
-                }, 1000)
+                    router.push(`/exam`);
+                }, 1000);
             } else {
                 console.error("[Client] Upload failed:", result.error);
                 addMessage(result.error || "Upload failed. Please try again.", "error");
