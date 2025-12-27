@@ -18,9 +18,9 @@ async function getPdfExams() {
 
   const { data, error } = await supabase
     .from('pdf_uploads')
-    .select('id, file_name, storage_path, uploaded_at')
+    .select('id, file_name, storage_path, created_at')
     .eq('uploaded_by', user.id)
-    .order('uploaded_at', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (error) {
     console.error('[ExamPage] Error fetching PDF exams:', error);
@@ -30,7 +30,8 @@ async function getPdfExams() {
   // Map to PdfFile interface
   const formattedData = data?.map(item => ({
     ...item,
-    path: item.storage_path // Map storage_path to path
+    path: item.storage_path, // Map storage_path to path
+    uploaded_at: item.created_at // Map created_at to uploaded_at for the component
   })) || [];
 
   console.log('[ExamPage] Fetched exams:', formattedData.length);
