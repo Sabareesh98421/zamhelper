@@ -19,12 +19,11 @@ export default function PdfList({ files }: PdfListProps) {
     const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
     const router = useRouter();
 
-    const handleStartExam = () => {
-        if (selectedExamId) {
-            const file = files.find(f => f.id === selectedExamId);
-            if (file) {
-                router.push(`/exam/${file.id}?path=${encodeURIComponent(file.path)}`);
-            }
+    const handleStartExam = (fileToStart?: PdfFile) => {
+        const file = fileToStart || (selectedExamId ? files.find(f => f.id === selectedExamId) : null);
+
+        if (file) {
+            router.push(`/exam/${file.id}?path=${encodeURIComponent(file.path)}`);
         }
     };
 
@@ -46,15 +45,49 @@ export default function PdfList({ files }: PdfListProps) {
         );
     }
 
+    const formatFileName = (name: string) => {
+        // Attempt to remove UUID if it exists at the end (filename-uuid.pdf pattern from new upload)
+        // UUID v4 regex-ish: 8-4-4-4-12 hex chars
+        const uuidPattern = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/;
+
+        // Check if name ends with UUID (new pattern: filename-uuid)
+        // We might have extension involved? The upload action does `${file.name}-${uuidv4()}`. 
+        // So it's "report.pdf-uuid".
+
+        if (name.match(uuidPattern)) {
+            // Try to assume the UUID is the "junk" part.
+            // If it starts with UUID (old pattern): uuid-filename
+            if (name.match(/^[0-9a-fA-F]{8}-/)) {
+                return name.replace(uuidPattern, '').replace(/^-|-$/g, '');
+            }
+            // If it ends with UUID (new pattern): filename-uuid
+            return name.replace(uuidPattern, '').replace(/-$/, '');
+        }
+        return name;
+    };
+
     return (
         <div className="space-y-8">
+            <div className="flex justify-center border-b pb-6 dark:border-gray-700">
+                <button
+                    onClick={() => handleStartExam()}
+                    disabled={!selectedExamId}
+                    className="w-full md:w-auto px-8 py-3 text-lg font-bold text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
+                >
+                    {selectedExamId ? 'Start Selected Exam' : 'Select an Exam to Start'}
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {files.map((file) => {
                     const isSelected = selectedExamId === file.id;
+                    const displayName = formatFileName(file.file_name);
+
                     return (
                         <div
                             key={file.id}
                             onClick={() => setSelectedExamId(file.id)}
+                            onDoubleClick={() => handleStartExam(file)}
                             className={`block p-6 border rounded-xl shadow-sm cursor-pointer transition-all duration-200 
                                 ${isSelected
                                     ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500 dark:bg-indigo-900/30 dark:border-indigo-400'
@@ -66,8 +99,8 @@ export default function PdfList({ files }: PdfListProps) {
                                     {isSelected ? <CheckCircleIcon className="h-8 w-8" /> : <DocumentTextIcon className="h-8 w-8" />}
                                 </div>
                                 <div className="overflow-hidden">
-                                    <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate" title={file.file_name}>
-                                        {file.file_name}
+                                    <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate" title={displayName}>
+                                        {displayName}
                                     </h5>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
                                         {new Date(file.uploaded_at).toLocaleDateString()}
@@ -76,22 +109,12 @@ export default function PdfList({ files }: PdfListProps) {
                             </div>
                             <div className="mt-auto flex justify-between items-center">
                                 <span className={`text-sm font-medium ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400'}`}>
-                                    {isSelected ? 'Selected' : 'Click to select'}
+                                    {isSelected ? 'Selected' : 'Double-click to start'}
                                 </span>
                             </div>
                         </div>
                     );
                 })}
-            </div>
-
-            <div className="flex justify-center border-t pt-6 dark:border-gray-700">
-                <button
-                    onClick={handleStartExam}
-                    disabled={!selectedExamId}
-                    className="w-full md:w-auto px-8 py-3 text-lg font-bold text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95"
-                >
-                    {selectedExamId ? 'Start Selected Exam' : 'Select an Exam to Start'}
-                </button>
             </div>
         </div>
     );
