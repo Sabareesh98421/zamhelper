@@ -8,17 +8,18 @@ import { deletePdf, getDownloadUrl } from './actions';
 // Define a type for the file prop for better type safety
 interface FileData {
     name: string;
-    size: number;
+    path: string;
+    size?: number; // Made optional as DB doesn't have it yet
     createdAt: string;
 }
 
 const PdfList = ({ files, error }: { files: FileData[], error: string | null }) => {
     const [isPending, startTransition] = useTransition();
 
-    const handleDelete = (fileName: string) => {
-        if (window.confirm(`Are you sure you want to delete ${fileName}? This action cannot be undone.`)) {
+    const handleDelete = (fileName: string, storagePath: string) => {
+        if (window.confirm(`Are you sure you want to delete ${cleanFileName(fileName)}? This action cannot be undone.`)) {
             startTransition(async () => {
-                const result = await deletePdf(fileName);
+                const result = await deletePdf(fileName, storagePath);
                 if (result?.error) {
                     alert(`Error: ${result.error}`);
                 }
@@ -27,9 +28,9 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
         }
     };
 
-    const handleDownload = (fileName: string) => {
+    const handleDownload = (storagePath: string) => {
         startTransition(async () => {
-            const result = await getDownloadUrl(fileName);
+            const result = await getDownloadUrl(storagePath);
             if (result) {
                 window.open(result, '_blank');
             } else if (result) {
@@ -38,13 +39,20 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
         });
     };
 
-    const formatBytes = (bytes: number, decimals = 2) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const dm = decimals < 0 ? 0 : decimals;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    const cleanFileName = (fileName: string) => {
+        // Regex Explaination:
+        // (.*?)     -> Group 1: The original filename (lazy match)
+        // -         -> Hyphen separator
+        // [a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12} -> UUID pattern
+        // $         -> End of string
+        // We use case insensitive flag 'i' although standard UUIDs are lowercase.
+        const uuidPattern = /^(.*)-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        const match = fileName.match(uuidPattern);
+
+        if (match) {
+            return match[1]; // Return the part before the UUID and its preceding hyphen
+        }
+        return fileName;
     };
 
     if (error) {
@@ -63,7 +71,7 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
                     <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">File Name</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Size</th>
+                            {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Size</th> */}
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Upload Date</th>
                             <th scope="col" className="relative px-6 py-3">
                                 <span className="sr-only">Actions</span>
@@ -73,21 +81,29 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {files.length > 0 ? files.map((file) => (
                             <tr key={file.name} className={isPending ? 'opacity-50' : ''}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{file.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatBytes(file.size)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{format(new Date(file.createdAt), 'PPpp')}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-white">
+                                    {cleanFileName(file.name)}
+                                </td>
+                                {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{file.size ? formatBytes(file.size) : 'N/A'}</td> */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {format(new Date(file.createdAt), 'PPpp')}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex items-center justify-end space-x-4">
                                         <button
-                                            onClick={() => handleDownload(file.name)}
+                                            onClick={() => handleDownload(file.path)}
                                             disabled={isPending}
-                                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 disabled:opacity-50">
+                                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 disabled:opacity-50"
+                                            title="Download"
+                                        >
                                             <DocumentArrowDownIcon className="h-5 w-5" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(file.name)}
+                                            onClick={() => handleDelete(file.name, file.path)}
                                             disabled={isPending}
-                                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50">
+                                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                                            title="Delete"
+                                        >
                                             <TrashIcon className="h-5 w-5" />
                                         </button>
                                     </div>
@@ -95,7 +111,7 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <td colSpan={3} className="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
                                     No files found.
                                 </td>
                             </tr>
