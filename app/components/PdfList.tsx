@@ -4,31 +4,31 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DocumentTextIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
-interface Exam {
+interface PdfFile {
     id: string;
     file_name: string;
-    storage_path: string;
+    path: string; // Renamed from storage_path
     uploaded_at: string;
 }
 
 interface PdfListProps {
-    exams: Exam[];
+    files: PdfFile[];
 }
 
-export default function PdfList({ exams }: PdfListProps) {
+export default function PdfList({ files }: PdfListProps) {
     const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
     const router = useRouter();
 
     const handleStartExam = () => {
         if (selectedExamId) {
-            const exam = exams.find(e => e.id === selectedExamId);
-            if (exam) {
-                router.push(`/exam/${exam.id}?path=${encodeURIComponent(exam.storage_path)}`);
+            const file = files.find(f => f.id === selectedExamId);
+            if (file) {
+                router.push(`/exam/${file.id}?path=${encodeURIComponent(file.path)}`);
             }
         }
     };
 
-    if (!exams || exams.length === 0) {
+    if (!files || files.length === 0) {
         return (
             <div className="text-center py-16 bg-gray-50 dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700">
                 <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -49,12 +49,12 @@ export default function PdfList({ exams }: PdfListProps) {
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {exams.map((exam) => {
-                    const isSelected = selectedExamId === exam.id;
+                {files.map((file) => {
+                    const isSelected = selectedExamId === file.id;
                     return (
                         <div
-                            key={exam.id}
-                            onClick={() => setSelectedExamId(exam.id)}
+                            key={file.id}
+                            onClick={() => setSelectedExamId(file.id)}
                             className={`block p-6 border rounded-xl shadow-sm cursor-pointer transition-all duration-200 
                                 ${isSelected
                                     ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500 dark:bg-indigo-900/30 dark:border-indigo-400'
@@ -66,11 +66,11 @@ export default function PdfList({ exams }: PdfListProps) {
                                     {isSelected ? <CheckCircleIcon className="h-8 w-8" /> : <DocumentTextIcon className="h-8 w-8" />}
                                 </div>
                                 <div className="overflow-hidden">
-                                    <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate" title={exam.file_name}>
-                                        {exam.file_name}
+                                    <h5 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white truncate" title={file.file_name}>
+                                        {file.file_name}
                                     </h5>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        {new Date(exam.uploaded_at).toLocaleDateString()}
+                                        {new Date(file.uploaded_at).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>

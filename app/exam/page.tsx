@@ -9,7 +9,12 @@ async function getPdfExams() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return [];
+  if (!user) {
+    console.log('[ExamPage] No user found.');
+    return [];
+  }
+
+  console.log('[ExamPage] Fetching exams for user:', user.id);
 
   const { data, error } = await supabase
     .from('pdf_uploads')
@@ -18,11 +23,18 @@ async function getPdfExams() {
     .order('uploaded_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching PDF exams:', error);
+    console.error('[ExamPage] Error fetching PDF exams:', error);
     return [];
   }
 
-  return data;
+  // Map to PdfFile interface
+  const formattedData = data?.map(item => ({
+    ...item,
+    path: item.storage_path // Map storage_path to path
+  })) || [];
+
+  console.log('[ExamPage] Fetched exams:', formattedData.length);
+  return formattedData;
 }
 
 const ExamPage = async () => {
@@ -37,7 +49,7 @@ const ExamPage = async () => {
         </Link>
       </div>
 
-      <PdfList exams={exams} />
+      <PdfList files={exams} />
     </div>
   );
 };
