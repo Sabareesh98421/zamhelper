@@ -5,6 +5,9 @@ import { createExamFromPdf } from '@/app/exam/actions';
 import ExamTaker from './ExamTaker';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // Helper to get PDF path from DB if not in query params (robustness)
 async function getPdfPath(id: string) {
   const supabase = await createSupabaseServerClient();
@@ -18,7 +21,7 @@ async function getPdfPath(id: string) {
   return data;
 }
 
-export default async function ExamIdPage({ params, searchParams }: { params: { id: string }, searchParams: { path?: string } }) {
+export default async function ExamIdPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ path?: string }> }) {
   const { id } = await params;
   const { path } = await searchParams; // Next.js 15+ searchParams is async? Only params. Wait, check Next 16. In 15+ both are promises.
   // In strict Next 15+, await params. In 14 no. User said Next 16.0.10.
