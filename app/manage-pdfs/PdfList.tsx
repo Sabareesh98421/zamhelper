@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useTransition } from 'react';
-import { DocumentArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { DocumentArrowDownIcon, TrashIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
-import { deletePdf, getDownloadUrl } from './actions';
+import { deletePdf, getDownloadUrl, extractText } from './actions';
 
 // Define a type for the file prop for better type safety
 interface FileData {
@@ -38,6 +38,17 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
             }
         });
     };
+
+    const handleExtractText = (storagePath: string) => {
+        startTransition(async () => {
+            const result = await extractText(storagePath);
+            if (result.success) {
+                alert(`Extracted Text:\n\n${result.text}`);
+            } else {
+                alert(`Error extracting text: ${result.error}`);
+            }
+        });
+    }
 
     const cleanFileName = (fileName: string) => {
         // Regex Explaination:
@@ -90,6 +101,14 @@ const PdfList = ({ files, error }: { files: FileData[], error: string | null }) 
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex items-center justify-end space-x-4">
+                                        <button
+                                            onClick={() => handleExtractText(file.path)}
+                                            disabled={isPending}
+                                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 disabled:opacity-50"
+                                            title="Extract Text with OCR"
+                                        >
+                                            <DocumentTextIcon className="h-5 w-5" />
+                                        </button>
                                         <button
                                             onClick={() => handleDownload(file.path)}
                                             disabled={isPending}
