@@ -32,3 +32,6 @@ firebase-debug.log
 
 # Local Environment Variables
 .env.local
+
+# Rust
+/rust-ocr/target
