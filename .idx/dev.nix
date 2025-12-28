@@ -9,6 +9,11 @@
     pkgs.yarn
     pkgs.nodePackages.pnpm
     pkgs.bun
+    pkgs.rustc
+    pkgs.cargo
+    pkgs.tesseract
+    pkgs.gcc
+    pkgs.pkg-config
   ];
   # Sets environment variables in the workspace
   env = {};
