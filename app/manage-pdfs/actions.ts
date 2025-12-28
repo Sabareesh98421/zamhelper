@@ -73,3 +73,41 @@ export async function getDownloadUrl(fullPath: string): Promise<string> {
     });
     return url;
 }
+
+export async function extractText(storagePath: string): Promise<{ success: boolean; text?: string; error?: string }> {
+    if (!adminStorage) {
+        return { success: false, error: 'Firebase Admin not initialized' };
+    }
+
+    try {
+        console.log(`[OCR] Starting extraction for: ${storagePath}`);
+        const bucket = adminStorage.bucket();
+        const file = bucket.file(storagePath);
+
+        // Creates a temporary file path
+        const os = await import('os');
+        const path = await import('path');
+        const fs = await import('fs');
+        const tempFilePath = path.join(os.tmpdir(), `ocr_${Date.now()}_${path.basename(storagePath)}`);
+
+        // Download the file
+        await file.download({ destination: tempFilePath });
+        console.log(`[OCR] Downloaded to: ${tempFilePath}`);
+
+        // Perform OCR
+        // Dynamic import to avoid issues if ocr.ts has side effects or static analysis issues in some envs
+        const { performOcr } = await import('@/app/lib/ocr');
+        const text = await performOcr(tempFilePath);
+
+        // Cleanup
+        fs.unlink(tempFilePath, (err: any) => {
+            if (err) console.error('[OCR] Failed to cleanup temp file:', err);
+        });
+
+        return { success: true, text };
+
+    } catch (error: any) {
+        console.error('[OCR] Extraction failed:', error);
+        return { success: false, error: error.message };
+    }
+}
