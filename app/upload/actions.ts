@@ -159,7 +159,7 @@ export async function uploadPdf(formData: FormData) {
             }
         }
 
-        return { success: true, uploadId: uploadId, fileName };
+        return { success: true, uploadId: String(uploadId), fileName };
 
     } catch (error: any) {
         console.error('[Upload Debug] Error uploading file (Global Catch):', error);
