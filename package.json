@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:rust": "cd app/lib/parser/rust-ocr && cargo build --release",
+    "build": "npm run build:rust && next build",
     "start": "next start",
     "lint": "eslint"
   },

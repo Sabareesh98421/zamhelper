@@ -1,7 +1,7 @@
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use tempfile;
 
 fn run_tesseract(image: &Path) -> Result<String, String> {
     let output = Command::new("tesseract")
@@ -17,11 +17,7 @@ fn run_tesseract(image: &Path) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
-fn ocr_image(path: &Path) -> Result<String, String> {
-    run_tesseract(path)
-}
-
-fn ocr_pdf(path: &Path) -> Result<String, String> {
+pub fn extract_text(path: &Path) -> Result<String, String> {
     let temp_dir = tempfile::tempdir()
         .map_err(|e| format!("Temp dir error: {e}"))?;
 
@@ -53,38 +49,10 @@ fn ocr_pdf(path: &Path) -> Result<String, String> {
     images.sort(); // page order matters
 
     for img in images {
-        let text = run_tesseract(&img)?;
+        let text = run_tesseract(&img).unwrap_or_default();
         result.push_str(&text);
         result.push('\n');
     }
 
     Ok(result)
-}
-
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: {} <image_or_pdf_path>", args[0]);
-        std::process::exit(1);
-    }
-
-    let input = Path::new(&args[1]);
-
-    if !input.exists() {
-        eprintln!("File not found: {}", input.display());
-        std::process::exit(1);
-    }
-
-    let result = match input.extension().and_then(|e| e.to_str()) {
-        Some("pdf") => ocr_pdf(input),
-        _ => ocr_image(input),
-    };
-
-    match result {
-        Ok(text) => println!("{text}"),
-        Err(err) => {
-            eprintln!("OCR failed: {err}");
-            std::process::exit(1);
-        }
-    }
 }

@@ -7,6 +7,7 @@ import { type User } from '@supabase/supabase-js';
 interface Exam {
   id: string;
   file_name: string;
+  status: string;
 }
 
 export default function Home() {
@@ -22,13 +23,13 @@ export default function Home() {
 
       const { data: examsData, error } = await supabase
         .from('pdf_uploads')
-        .select('id, file_name')
+        .select('id, file_name, status')
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching exams:', error);
       } else if (examsData) {
-        setExams(examsData);
+        setExams(examsData as any);
       }
       setLoading(false);
     };
@@ -77,10 +78,23 @@ export default function Home() {
         <h2 className="text-3xl font-bold mb-8 text-center">Recently Uploaded Exams</h2>
         {exams.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {exams.map((exam) => (
-              <Link key={exam.id} href={`/exam/${exam.id}`}>
-                <div className="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
-                  <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{exam.file_name}</h5>
+            {exams.map((exam: any) => (
+              <Link key={exam.id} href={exam.status === 'failed' ? '#' : `/exam/${exam.id}`} onClick={e => exam.status === 'failed' && e.preventDefault()}>
+                <div className={`block p-6 bg-white border rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors ${exam.status === 'failed' ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h5 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white truncate pr-2">{exam.file_name}</h5>
+                    {exam.status === 'failed' && (
+                      <span className="bg-red-100 text-red-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">Failed</span>
+                    )}
+                    {exam.status === 'pending' && (
+                      <span className="bg-yellow-100 text-yellow-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-yellow-900 dark:text-yellow-300">Processing</span>
+                    )}
+                  </div>
+                  {exam.status === 'failed' ? (
+                    <p className="text-sm text-red-600 dark:text-red-400">Processing failed. Likely image-based PDF.</p>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Ready to take exam.</p>
+                  )}
                 </div>
               </Link>
             ))}

@@ -34,4 +34,4 @@ firebase-debug.log
 .env.local
 
 # Rust
-/rust-ocr/target
+app/lib/parser/rust-ocr/target/

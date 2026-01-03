@@ -4,6 +4,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { adminStorage } from "@/app/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import { processAndSaveExam } from "@/app/lib/parser";
 
 export async function uploadPdf(formData: FormData) {
     console.log("[Upload Debug] Starting uploadPdf action");
@@ -101,62 +102,14 @@ export async function uploadPdf(formData: FormData) {
 
         const uploadId = pdfData.id;
 
-        // 2. Generate Mock Questions
-        const mockQuestions = [
-            {
-                text: "What is the primary capital of the implementation?",
-                options: [
-                    { text: "London", isCorrect: false },
-                    { text: "Paris", isCorrect: true },
-                    { text: "Berlin", isCorrect: false },
-                    { text: "Madrid", isCorrect: false }
-                ]
-            },
-            {
-                text: "Which protocol is used for secure web communication?",
-                options: [
-                    { text: "FTP", isCorrect: false },
-                    { text: "HTTP", isCorrect: false },
-                    { text: "HTTPS", isCorrect: true },
-                    { text: "SMTP", isCorrect: false }
-                ]
-            },
-            {
-                text: "What is the result of 2 + 2?",
-                options: [
-                    { text: "3", isCorrect: false },
-                    { text: "4", isCorrect: true },
-                    { text: "5", isCorrect: false },
-                    { text: "22", isCorrect: false }
-                ]
-            }
-        ];
+        // 2. Process and Save Exam (Parse & DB Insert)
+        const processResult = await processAndSaveExam(String(uploadId), buffer, supabase);
 
-        // 3. Insert Questions and Options
-        for (const q of mockQuestions) {
-            // Insert Question
-            const { data: questionData, error: qError } = await supabase.from('questions').insert({
-                source_pdf_id: uploadId,
-                question_text: q.text,
-                explanation: "This is a mock explanation."
-            }).select('id').single();
-
-            if (qError) {
-                console.error("Error inserting question:", qError);
-                continue; // Skip options if question failed
-            }
-
-            // Insert Options for this Question
-            const optionsToInsert = q.options.map(opt => ({
-                question_id: questionData.id,
-                option_text: opt.text,
-                is_correct: opt.isCorrect
-            }));
-
-            const { error: oError } = await supabase.from('question_options').insert(optionsToInsert);
-            if (oError) {
-                console.error("Error inserting options:", oError);
-            }
+        if (!processResult.success) {
+            console.warn("[Upload Debug] Exam processing had issues:", processResult.error);
+            // We don't fail the upload request itself if the file is up, but we might want to tell the user?
+            // The actions returns object.
+            // For now, let's just return success=true (upload worked), but maybe include warning?
         }
 
         return { success: true, uploadId: String(uploadId), fileName };
