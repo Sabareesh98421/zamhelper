@@ -88,16 +88,27 @@ export async function extractText(storagePath: string): Promise<{ success: boole
         const os = await import('os');
         const path = await import('path');
         const fs = await import('fs');
+        // Import new parser
+        const { invokeRustParser } = await import('@/app/lib/parser/rust-wrapper');
+
         const tempFilePath = path.join(os.tmpdir(), `ocr_${Date.now()}_${path.basename(storagePath)}`);
 
         // Download the file
         await file.download({ destination: tempFilePath });
         console.log(`[OCR] Downloaded to: ${tempFilePath}`);
 
-        // Perform OCR
-        // Dynamic import to avoid issues if ocr.ts has side effects or static analysis issues in some envs
-        const { performOcr } = await import('@/app/lib/ocr');
-        const text = await performOcr(tempFilePath);
+        // Perform Parsing (Replaces old OCR)
+        const result = await invokeRustParser(tempFilePath);
+
+        let text = "";
+        if (result.valid) {
+            // Convert structured questions back to text representation for display
+            text = result.questions.map(q =>
+                `Q${q.id}: ${q.text}\nOptions: ${q.options.join(', ')}\nAnswer: ${q.correctAnswer}`
+            ).join('\n\n');
+        } else {
+            text = `Parsing failed or returned no questions. Error: ${result.error}`;
+        }
 
         // Cleanup
         fs.unlink(tempFilePath, (err: any) => {

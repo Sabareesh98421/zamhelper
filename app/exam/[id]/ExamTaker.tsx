@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Question } from '@/app/lib/parsing';
+import { Question } from '@/app/lib/parser/types';
 import { CheckCircleIcon, XCircleIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
 
@@ -117,8 +117,8 @@ export default function ExamTaker({ questions, examTitle }: ExamTakerProps) {
                                 className={optionClass}
                             >
                                 <span className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full mr-4 border ${isSelected || (isSubmitted && isCorrect)
-                                        ? 'bg-indigo-600 border-indigo-600 text-white'
-                                        : 'border-gray-300 text-gray-500'
+                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                    : 'border-gray-300 text-gray-500'
                                     }`}>
                                     {label}
                                 </span>
