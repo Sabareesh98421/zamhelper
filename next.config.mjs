@@ -33,6 +33,7 @@ const nextConfig = {
       fullUrl: true,
     },
   },
+  serverExternalPackages: ['pdf-parse', 'sharp'], // Prevent bundling of native/FS-reliant modules
 };
 
 export default nextConfig;
