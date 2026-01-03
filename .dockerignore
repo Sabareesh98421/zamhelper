@@ -1,0 +1,24 @@
+# Exclude dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Exclude build output
+.next
+out
+dist
+build
+
+# Exclude Rust artifacts (IMPORTANT: windows binaries shouldn't go to linux)
+app/lib/parser/rust-ocr/target/
+target/
+
+# Misc
+.DS_Store
+*.pem
+.env.local
+.env
+.git
+.gitignore
+Dockerfile
+README.md
